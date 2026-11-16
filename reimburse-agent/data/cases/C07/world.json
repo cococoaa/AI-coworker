@@ -1,0 +1,34 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26298963025431015826",
+      "issue_date": "2026-10-04",
+      "total_fen": 60000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "9131010284NTTH4U9Y",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "9131010284NTTH4U9Y",
+      "name": "常州栖云酒店管理有限公司",
+      "city": "常州",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC07N1",
+      "invoice_no": "26371935563884804371",
+      "applicant_id": "E3001",
+      "seller_tax_id": "91310114T6J2H9WQTF",
+      "issue_date": "2026-08-21",
+      "amount_fen": 78280,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-08-26"
+    }
+  ],
+  "faults": null
+}

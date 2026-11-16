@@ -1,0 +1,66 @@
+{
+  "id": "C50",
+  "title": "叠加：招待人均超标且达审批线无审批号，补材料压过调整",
+  "tags": [
+    "meal",
+    "combo"
+  ],
+  "decision": "need_more_info",
+  "hits": [
+    "R05-a",
+    "R11-a"
+  ],
+  "approved_fen": 0,
+  "invoice": {
+    "invoice_no": "26199484984161574052",
+    "issue_date": "2026-10-01",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "广州川味坊餐饮管理有限公司",
+    "seller_tax_id": "91310103QGWE9YHKHN",
+    "item_name": "*餐饮服务*餐费",
+    "tax_rate_pct": 6,
+    "ex_tax_fen": 235849,
+    "tax_fen": 14151,
+    "total_fen": 250000
+  },
+  "support": {
+    "kind": "consumption",
+    "date": "2026-10-01",
+    "city": "广州",
+    "venue": "广州川味坊",
+    "lines": [
+      {
+        "name": "时令蔬菜",
+        "qty": 2,
+        "amount_fen": 23809
+      },
+      {
+        "name": "农家小炒肉",
+        "qty": 1,
+        "amount_fen": 59523
+      },
+      {
+        "name": "饮料",
+        "qty": 2,
+        "amount_fen": 47619
+      },
+      {
+        "name": "宫保鸡丁",
+        "qty": 2,
+        "amount_fen": 59523
+      },
+      {
+        "name": "清蒸鲈鱼",
+        "qty": 1,
+        "amount_fen": 23809
+      },
+      {
+        "name": "酸辣汤",
+        "qty": 2,
+        "amount_fen": 35717
+      }
+    ],
+    "total_fen": 250000
+  }
+}

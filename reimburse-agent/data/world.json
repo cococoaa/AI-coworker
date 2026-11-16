@@ -1,0 +1,1500 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26378293466243148653",
+      "issue_date": "2026-10-01",
+      "total_fen": 55300,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26219214728222550625",
+      "issue_date": "2026-09-21",
+      "total_fen": 128000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101106FJ4NMP0UM",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26173320491881669346",
+      "issue_date": "2026-10-02",
+      "total_fen": 76000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310108311WXRE501",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26303423198746100659",
+      "issue_date": "2026-10-04",
+      "total_fen": 42000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101026MGG04WEKY",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26488467607931082854",
+      "issue_date": "2026-09-26",
+      "total_fen": 150000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101108NW6907Y6L",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26400992317037169739",
+      "issue_date": "2026-10-20",
+      "total_fen": 340000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310109M3F9C00UE0",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26298963025431015826",
+      "issue_date": "2026-10-04",
+      "total_fen": 60000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "9131010284NTTH4U9Y",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26385707484295593027",
+      "issue_date": "2026-09-24",
+      "total_fen": 50001,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101081DG7C6WKMU",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26412448897242106757",
+      "issue_date": "2026-10-14",
+      "total_fen": 120000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310112X938AW0EWD",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26242241817956040180",
+      "issue_date": "2026-10-15",
+      "total_fen": 48600,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26404011075737281231",
+      "issue_date": "2026-10-23",
+      "total_fen": 48600,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26305188240661770454",
+      "issue_date": "2026-10-01",
+      "total_fen": 199999,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "9131010773CJWM9LLT",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26162599919833716864",
+      "issue_date": "2026-10-21",
+      "total_fen": 200000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310119AP08T3PECD",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26378506188498079647",
+      "issue_date": "2026-09-22",
+      "total_fen": 47000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26199679169977329667",
+      "issue_date": "2026-10-24",
+      "total_fen": 55300,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26141970487430485236",
+      "issue_date": "2026-09-25",
+      "total_fen": 150000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101119AU0BXH6ER",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26469936170759785061",
+      "issue_date": "2026-10-24",
+      "total_fen": 150000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310119UU5QEH2ADY",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26155084483479149855",
+      "issue_date": "2026-10-26",
+      "total_fen": 265000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101106FJ4NMP0UM",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26187761875451459114",
+      "issue_date": "2026-09-25",
+      "total_fen": 70000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101032N4TN8QPNL",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26195976884961685981",
+      "issue_date": "2026-10-01",
+      "total_fen": 42000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "voided"
+    },
+    {
+      "invoice_no": "26456087985691745012",
+      "issue_date": "2026-10-23",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310100NUBD0NR0RJ",
+      "status": "red_reversed"
+    },
+    {
+      "invoice_no": "26146137993750891932",
+      "issue_date": "2026-10-01",
+      "total_fen": 89000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101106FJ4NMP0UM",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26436658179840797545",
+      "issue_date": "2026-10-01",
+      "total_fen": 31000,
+      "buyer_tax_id": "",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26429250844050945276",
+      "issue_date": "2026-10-21",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101029UWL8NE8H6",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26180672070715148994",
+      "issue_date": "2026-10-27",
+      "total_fen": 40000,
+      "buyer_tax_id": "91310115MA1FL8X3K1",
+      "seller_tax_id": "9131010670G0XXYK0A",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26464728576115834245",
+      "issue_date": "2026-10-14",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310110Y3Y228R0F0",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26353197124678061306",
+      "issue_date": "2026-10-07",
+      "total_fen": 120000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103RDY38Y3YCG",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26334764353493803100",
+      "issue_date": "2026-10-23",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103AEAFLCAA04",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26215575503802404516",
+      "issue_date": "2026-10-07",
+      "total_fen": 98000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101106FJ4NMP0UM",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26110566608052002274",
+      "issue_date": "2026-10-05",
+      "total_fen": 120000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310109FPL4FDQE9P",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26267262652749425360",
+      "issue_date": "2026-10-27",
+      "total_fen": 150000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310111XHAJC9J4RD",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26396410290534891047",
+      "issue_date": "2026-10-26",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310109BKM3PMTR7X",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26204058769137649578",
+      "issue_date": "2026-10-21",
+      "total_fen": 55300,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26117015168768411478",
+      "issue_date": "2026-10-06",
+      "total_fen": 47000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26351197006156698606",
+      "issue_date": "2026-10-18",
+      "total_fen": 105000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310107W906JQQYDE",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26437813718652592958",
+      "issue_date": "2026-10-04",
+      "total_fen": 92000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26463538419240351009",
+      "issue_date": "2026-10-13",
+      "total_fen": 92000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26419429437566340186",
+      "issue_date": "2026-10-05",
+      "total_fen": 56000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310114U4E3NEJR29",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26479265244409871122",
+      "issue_date": "2026-10-25",
+      "total_fen": 140000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310117PLPW7LRTGU",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26405372675637039389",
+      "issue_date": "2026-10-15",
+      "total_fen": 55300,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26323820565074735369",
+      "issue_date": "2026-09-24",
+      "total_fen": 24000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310109383FE6UXLU",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26272597602268225774",
+      "issue_date": "2026-10-28",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310113PUXYB3HE9F",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26191539657101223487",
+      "issue_date": "2026-10-15",
+      "total_fen": 55300,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26221257391937633554",
+      "issue_date": "2026-10-08",
+      "total_fen": 55300,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26493829584311275712",
+      "issue_date": "2026-10-13",
+      "total_fen": 100000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310117D2ALLX8LFU",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26426020723764915510",
+      "issue_date": "2026-09-27",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "9131010833A44GXQ5L",
+      "status": "voided"
+    },
+    {
+      "invoice_no": "26361341969690311529",
+      "issue_date": "2026-10-17",
+      "total_fen": 92000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26388628216376193821",
+      "issue_date": "2026-10-19",
+      "total_fen": 62000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310116A91G1XX1UD",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26199484984161574052",
+      "issue_date": "2026-10-01",
+      "total_fen": 250000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103QGWE9YHKHN",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26121815936563498577",
+      "issue_date": "2026-10-11",
+      "total_fen": 61000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26464964258890883397",
+      "issue_date": "2026-09-23",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310108311WXRE501",
+      "status": "voided"
+    },
+    {
+      "invoice_no": "26226848865404883141",
+      "issue_date": "2026-10-15",
+      "total_fen": 36000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101038BWKNWE1F0",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26496785110345060153",
+      "issue_date": "2026-10-05",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "9131011336J0E2TF0P",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26171801667222176003",
+      "issue_date": "2026-10-30",
+      "total_fen": 180000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101183UDT49JM99",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26431298846806677658",
+      "issue_date": "2026-09-25",
+      "total_fen": 40000,
+      "buyer_tax_id": "91310115MA1FL8X3K1",
+      "seller_tax_id": "91310111XHAJC9J4RD",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26371610785120353657",
+      "issue_date": "2026-10-18",
+      "total_fen": 55300,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "voided"
+    },
+    {
+      "invoice_no": "26332847184536550555",
+      "issue_date": "2026-10-18",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103MYB2EHCKLY",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26157293145980216867",
+      "issue_date": "2026-10-24",
+      "total_fen": 55300,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    },
+    {
+      "invoice_no": "26207499687437581384",
+      "issue_date": "2026-10-22",
+      "total_fen": 150000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101161C6Y62KMH1",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310103692B6R5G35",
+      "name": "东海铁路客运服务有限公司",
+      "city": "上海",
+      "status": "存续"
+    },
+    {
+      "tax_id": "913101106FJ4NMP0UM",
+      "name": "云帆航空有限责任公司",
+      "city": "上海",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310108311WXRE501",
+      "name": "成都望岳酒店管理有限公司",
+      "city": "成都",
+      "status": "存续"
+    },
+    {
+      "tax_id": "913101026MGG04WEKY",
+      "name": "西安食尚汇餐饮管理有限公司",
+      "city": "西安",
+      "status": "存续"
+    },
+    {
+      "tax_id": "913101108NW6907Y6L",
+      "name": "广州老街味道餐饮管理有限公司",
+      "city": "广州",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310109M3F9C00UE0",
+      "name": "合肥食尚汇餐饮管理有限公司",
+      "city": "合肥",
+      "status": "存续"
+    },
+    {
+      "tax_id": "9131010284NTTH4U9Y",
+      "name": "常州栖云酒店管理有限公司",
+      "city": "常州",
+      "status": "存续"
+    },
+    {
+      "tax_id": "913101081DG7C6WKMU",
+      "name": "深圳安澜酒店管理有限公司",
+      "city": "深圳",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310112X938AW0EWD",
+      "name": "苏州聚贤楼餐饮管理有限公司",
+      "city": "苏州",
+      "status": "存续"
+    },
+    {
+      "tax_id": "9131010773CJWM9LLT",
+      "name": "厦门江南小馆餐饮管理有限公司",
+      "city": "厦门",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310119AP08T3PECD",
+      "name": "长沙海味轩餐饮管理有限公司",
+      "city": "长沙",
+      "status": "存续"
+    },
+    {
+      "tax_id": "913101119AU0BXH6ER",
+      "name": "成都川味坊餐饮管理有限公司",
+      "city": "成都",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310119UU5QEH2ADY",
+      "name": "成都聚贤楼餐饮管理有限公司",
+      "city": "成都",
+      "status": "存续"
+    },
+    {
+      "tax_id": "913101032N4TN8QPNL",
+      "name": "天津安澜酒店管理有限公司",
+      "city": "天津",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310100NUBD0NR0RJ",
+      "name": "厦门安澜酒店管理有限公司",
+      "city": "厦门",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310102YDK8RGFK7B",
+      "name": "南京食尚汇餐饮管理有限公司",
+      "city": "南京",
+      "status": "存续"
+    },
+    {
+      "tax_id": "913101029UWL8NE8H6",
+      "name": "长沙云舍酒店管理有限公司",
+      "city": "长沙",
+      "status": "存续"
+    },
+    {
+      "tax_id": "9131010670G0XXYK0A",
+      "name": "宁波川味坊餐饮管理有限公司",
+      "city": "宁波",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310110Y3Y228R0F0",
+      "name": "重庆望岳酒店管理有限公司",
+      "city": "重庆",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310103RDY38Y3YCG",
+      "name": "青岛聚贤楼餐饮管理有限公司",
+      "city": "青岛",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310103AEAFLCAA04",
+      "name": "青岛云舍酒店管理有限公司",
+      "city": "青岛",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310109FPL4FDQE9P",
+      "name": "苏州川味坊餐饮管理有限公司",
+      "city": "苏州",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310111XHAJC9J4RD",
+      "name": "宁波食尚汇餐饮管理有限公司",
+      "city": "宁波",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310109BKM3PMTR7X",
+      "name": "青岛望岳酒店管理有限公司",
+      "city": "青岛",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310107W906JQQYDE",
+      "name": "郑州悦途酒店管理有限公司",
+      "city": "郑州",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310114U4E3NEJR29",
+      "name": "西安聚贤楼餐饮管理有限公司",
+      "city": "西安",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310117PLPW7LRTGU",
+      "name": "青岛食尚汇餐饮管理有限公司",
+      "city": "青岛",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310109383FE6UXLU",
+      "name": "鸿运来餐饮服务有限公司",
+      "city": "长沙",
+      "status": "注销"
+    },
+    {
+      "tax_id": "91310113PUXYB3HE9F",
+      "name": "海岚商务酒店管理有限公司",
+      "city": "青岛",
+      "status": "经营异常"
+    },
+    {
+      "tax_id": "91310117D2ALLX8LFU",
+      "name": "武汉江南小馆餐饮管理有限公司",
+      "city": "武汉",
+      "status": "存续"
+    },
+    {
+      "tax_id": "9131010833A44GXQ5L",
+      "name": "远洲商务酒店管理有限公司",
+      "city": "青岛",
+      "status": "注销"
+    },
+    {
+      "tax_id": "91310116A91G1XX1UD",
+      "name": "深圳悦途酒店管理有限公司",
+      "city": "深圳",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310103QGWE9YHKHN",
+      "name": "广州川味坊餐饮管理有限公司",
+      "city": "广州",
+      "status": "存续"
+    },
+    {
+      "tax_id": "913101038BWKNWE1F0",
+      "name": "金禾源餐饮服务有限公司",
+      "city": "南京",
+      "status": "注销"
+    },
+    {
+      "tax_id": "9131011336J0E2TF0P",
+      "name": "合肥安澜酒店管理有限公司",
+      "city": "合肥",
+      "status": "存续"
+    },
+    {
+      "tax_id": "913101183UDT49JM99",
+      "name": "深圳锦程酒店管理有限公司",
+      "city": "深圳",
+      "status": "存续"
+    },
+    {
+      "tax_id": "91310103MYB2EHCKLY",
+      "name": "盛世通商务酒店管理有限公司",
+      "city": "厦门",
+      "status": "注销"
+    },
+    {
+      "tax_id": "913101161C6Y62KMH1",
+      "name": "深圳老街味道餐饮管理有限公司",
+      "city": "深圳",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC01N1",
+      "invoice_no": "26313308406458740274",
+      "applicant_id": "E2001",
+      "seller_tax_id": "913101130294DHFNDM",
+      "issue_date": "2026-09-12",
+      "amount_fen": 141761,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-17"
+    },
+    {
+      "claim_no": "BHC05N1",
+      "invoice_no": "26472423373663328856",
+      "applicant_id": "E2002",
+      "seller_tax_id": "913101032WE46FFXUF",
+      "issue_date": "2026-08-25",
+      "amount_fen": 69971,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-08-30"
+    },
+    {
+      "claim_no": "BHC05N2",
+      "invoice_no": "26193637072402918718",
+      "applicant_id": "E1001",
+      "seller_tax_id": "91310115AB8GG2F7YF",
+      "issue_date": "2026-09-06",
+      "amount_fen": 110021,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-11"
+    },
+    {
+      "claim_no": "BHC06N1",
+      "invoice_no": "26380120735323957726",
+      "applicant_id": "E3001",
+      "seller_tax_id": "91310108XL0YPK9W13",
+      "issue_date": "2026-09-25",
+      "amount_fen": 198188,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-09-30"
+    },
+    {
+      "claim_no": "BHC07N1",
+      "invoice_no": "26371935563884804371",
+      "applicant_id": "E3001",
+      "seller_tax_id": "91310114T6J2H9WQTF",
+      "issue_date": "2026-08-21",
+      "amount_fen": 78280,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-08-26"
+    },
+    {
+      "claim_no": "BHC08N1",
+      "invoice_no": "26396299647472907647",
+      "applicant_id": "E1003",
+      "seller_tax_id": "91310112149GFRQPQ5",
+      "issue_date": "2026-08-10",
+      "amount_fen": 129726,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-08-15"
+    },
+    {
+      "claim_no": "BHC09N1",
+      "invoice_no": "26178303766816520497",
+      "applicant_id": "E1002",
+      "seller_tax_id": "91310119ERYPNBUJGH",
+      "issue_date": "2026-09-13",
+      "amount_fen": 95163,
+      "category": "lodging",
+      "status": "rejected",
+      "submit_date": "2026-09-18"
+    },
+    {
+      "claim_no": "BHC10N1",
+      "invoice_no": "26339701241232193336",
+      "applicant_id": "E2002",
+      "seller_tax_id": "91310106ABRRDUTUG4",
+      "issue_date": "2026-09-09",
+      "amount_fen": 46233,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-14"
+    },
+    {
+      "claim_no": "BHC11N1",
+      "invoice_no": "26415401405719761168",
+      "applicant_id": "E1001",
+      "seller_tax_id": "913101009LBAJD0AL0",
+      "issue_date": "2026-10-05",
+      "amount_fen": 54930,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-10-10"
+    },
+    {
+      "claim_no": "BHC12N1",
+      "invoice_no": "26316927453252823751",
+      "applicant_id": "E2003",
+      "seller_tax_id": "913101096E3TRLDUT2",
+      "issue_date": "2026-09-12",
+      "amount_fen": 64446,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-17"
+    },
+    {
+      "claim_no": "BHC12N2",
+      "invoice_no": "26407267677635810964",
+      "applicant_id": "E2003",
+      "seller_tax_id": "913101106GKMHQPWM3",
+      "issue_date": "2026-08-26",
+      "amount_fen": 159207,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-08-31"
+    },
+    {
+      "claim_no": "BHC14N1",
+      "invoice_no": "26399477371694626905",
+      "applicant_id": "E1002",
+      "seller_tax_id": "91310115UG8CL2GC1G",
+      "issue_date": "2026-09-05",
+      "amount_fen": 177947,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-10"
+    },
+    {
+      "claim_no": "BHC15K1",
+      "invoice_no": "26163560255678849661",
+      "applicant_id": "E1004",
+      "seller_tax_id": "91310103692B6R5G35",
+      "issue_date": "2026-10-24",
+      "amount_fen": 55300,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-10-29"
+    },
+    {
+      "claim_no": "BHC16K1",
+      "invoice_no": "26448306022116788961",
+      "applicant_id": "E2002",
+      "seller_tax_id": "913101119AU0BXH6ER",
+      "issue_date": "2026-09-22",
+      "amount_fen": 120000,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-30"
+    },
+    {
+      "claim_no": "BHC16N1",
+      "invoice_no": "26454155477916341494",
+      "applicant_id": "E1005",
+      "seller_tax_id": "913101014FW4N619QJ",
+      "issue_date": "2026-08-17",
+      "amount_fen": 190011,
+      "category": "lodging",
+      "status": "rejected",
+      "submit_date": "2026-08-22"
+    },
+    {
+      "claim_no": "BHC17K1",
+      "invoice_no": "26282303081255643267",
+      "applicant_id": "E2002",
+      "seller_tax_id": "91310119UU5QEH2ADY",
+      "issue_date": "2026-10-20",
+      "amount_fen": 120000,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-10-29"
+    },
+    {
+      "claim_no": "BHC19K1",
+      "invoice_no": "26187761875451459114",
+      "applicant_id": "E1005",
+      "seller_tax_id": "913101032N4TN8QPNL",
+      "issue_date": "2026-09-25",
+      "amount_fen": 70000,
+      "category": "lodging",
+      "status": "rejected",
+      "submit_date": "2026-09-30"
+    },
+    {
+      "claim_no": "BHC19N1",
+      "invoice_no": "26169744222484581976",
+      "applicant_id": "E3001",
+      "seller_tax_id": "91310109JKP0C7RNL7",
+      "issue_date": "2026-08-20",
+      "amount_fen": 34247,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-08-25"
+    },
+    {
+      "claim_no": "BHC19N2",
+      "invoice_no": "26496121334216806331",
+      "applicant_id": "E1004",
+      "seller_tax_id": "91310108004EA1QNEG",
+      "issue_date": "2026-08-25",
+      "amount_fen": 92979,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-08-30"
+    },
+    {
+      "claim_no": "BHC20N1",
+      "invoice_no": "26416328955802172347",
+      "applicant_id": "E1003",
+      "seller_tax_id": "91310118NW7DH3R19Q",
+      "issue_date": "2026-08-28",
+      "amount_fen": 158377,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-02"
+    },
+    {
+      "claim_no": "BHC20N2",
+      "invoice_no": "26245492537923280702",
+      "applicant_id": "E2003",
+      "seller_tax_id": "913101149LRYKC0CUU",
+      "issue_date": "2026-09-15",
+      "amount_fen": 38136,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-20"
+    },
+    {
+      "claim_no": "BHC22N1",
+      "invoice_no": "26372131395345920903",
+      "applicant_id": "E1004",
+      "seller_tax_id": "91310102KR5GL3N0RC",
+      "issue_date": "2026-09-05",
+      "amount_fen": 174564,
+      "category": "meal",
+      "status": "rejected",
+      "submit_date": "2026-09-10"
+    },
+    {
+      "claim_no": "BHC22N2",
+      "invoice_no": "26117355024828360966",
+      "applicant_id": "E3001",
+      "seller_tax_id": "91310118YT5WWTPTR5",
+      "issue_date": "2026-08-17",
+      "amount_fen": 166049,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-08-22"
+    },
+    {
+      "claim_no": "BHC23N1",
+      "invoice_no": "26302108034470613428",
+      "applicant_id": "E1004",
+      "seller_tax_id": "913101067NXH7HYPHU",
+      "issue_date": "2026-08-27",
+      "amount_fen": 135675,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-01"
+    },
+    {
+      "claim_no": "BHC23N2",
+      "invoice_no": "26416539067983856618",
+      "applicant_id": "E2001",
+      "seller_tax_id": "91310115JC115KA79J",
+      "issue_date": "2026-09-16",
+      "amount_fen": 122015,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-09-21"
+    },
+    {
+      "claim_no": "BHC24N1",
+      "invoice_no": "26188253733769599915",
+      "applicant_id": "E2001",
+      "seller_tax_id": "91310117MQD1JRM6K1",
+      "issue_date": "2026-09-06",
+      "amount_fen": 37348,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-11"
+    },
+    {
+      "claim_no": "BHC24N2",
+      "invoice_no": "26279675553160967997",
+      "applicant_id": "E1003",
+      "seller_tax_id": "91310103X8AW8NFBQ4",
+      "issue_date": "2026-09-05",
+      "amount_fen": 170396,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-10"
+    },
+    {
+      "claim_no": "BHC25N1",
+      "invoice_no": "26323846294800468682",
+      "applicant_id": "E2003",
+      "seller_tax_id": "91310116R1JK5Y9B9F",
+      "issue_date": "2026-09-26",
+      "amount_fen": 149862,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-10-01"
+    },
+    {
+      "claim_no": "BHC25N2",
+      "invoice_no": "26155538219903305163",
+      "applicant_id": "E2002",
+      "seller_tax_id": "91310119KNFY8R2PT8",
+      "issue_date": "2026-10-04",
+      "amount_fen": 40206,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-10-09"
+    },
+    {
+      "claim_no": "BHC26N1",
+      "invoice_no": "26430691683739758349",
+      "applicant_id": "E1001",
+      "seller_tax_id": "91310117X70DWAL1MK",
+      "issue_date": "2026-09-21",
+      "amount_fen": 41847,
+      "category": "meal",
+      "status": "rejected",
+      "submit_date": "2026-09-26"
+    },
+    {
+      "claim_no": "BHC28N1",
+      "invoice_no": "26196387399204093436",
+      "applicant_id": "E1004",
+      "seller_tax_id": "9131010391YE0HYEA5",
+      "issue_date": "2026-08-24",
+      "amount_fen": 192701,
+      "category": "lodging",
+      "status": "rejected",
+      "submit_date": "2026-08-29"
+    },
+    {
+      "claim_no": "BHC28N2",
+      "invoice_no": "26197153873884183627",
+      "applicant_id": "E3002",
+      "seller_tax_id": "91310114YCF0X271BE",
+      "issue_date": "2026-09-07",
+      "amount_fen": 104950,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-12"
+    },
+    {
+      "claim_no": "BHC29K1",
+      "invoice_no": "26334764353493803100",
+      "applicant_id": "E1002",
+      "seller_tax_id": "91310103AEAFLCAA04",
+      "issue_date": "2026-10-23",
+      "amount_fen": 72000,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-10-28"
+    },
+    {
+      "claim_no": "BHC30K1",
+      "invoice_no": "26241291496593128540",
+      "applicant_id": "E1002",
+      "seller_tax_id": "913101106FJ4NMP0UM",
+      "issue_date": "2026-10-07",
+      "amount_fen": 98000,
+      "category": "transport",
+      "transport_mode": "flight",
+      "status": "approved",
+      "submit_date": "2026-10-12"
+    },
+    {
+      "claim_no": "BHC31K1",
+      "invoice_no": "26438249548761351228",
+      "applicant_id": "E2001",
+      "seller_tax_id": "91310109FPL4FDQE9P",
+      "issue_date": "2026-10-05",
+      "amount_fen": 110000,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-10-10"
+    },
+    {
+      "claim_no": "BHC32K1",
+      "invoice_no": "26269745306355196326",
+      "applicant_id": "E2003",
+      "seller_tax_id": "91310111XHAJC9J4RD",
+      "issue_date": "2026-10-26",
+      "amount_fen": 250000,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-11-01"
+    },
+    {
+      "claim_no": "BHC33N1",
+      "invoice_no": "26242314470985926390",
+      "applicant_id": "E1004",
+      "seller_tax_id": "91310112GD5G9EBXDM",
+      "issue_date": "2026-10-02",
+      "amount_fen": 87295,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-10-07"
+    },
+    {
+      "claim_no": "BHC33N2",
+      "invoice_no": "26112369761227486618",
+      "applicant_id": "E1004",
+      "seller_tax_id": "91310117KF7M60BF2G",
+      "issue_date": "2026-09-22",
+      "amount_fen": 27955,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-27"
+    },
+    {
+      "claim_no": "BHC34N1",
+      "invoice_no": "26258573717695821331",
+      "applicant_id": "E1002",
+      "seller_tax_id": "91310113HHDEUN4JJM",
+      "issue_date": "2026-09-20",
+      "amount_fen": 98478,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-25"
+    },
+    {
+      "claim_no": "BHC34N2",
+      "invoice_no": "26433712805799749681",
+      "applicant_id": "E3002",
+      "seller_tax_id": "91310115EAMJHXUYRP",
+      "issue_date": "2026-09-21",
+      "amount_fen": 93846,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-09-26"
+    },
+    {
+      "claim_no": "BHC38N1",
+      "invoice_no": "26257643659824181500",
+      "applicant_id": "E3001",
+      "seller_tax_id": "91310102UMTP0KWKB6",
+      "issue_date": "2026-09-07",
+      "amount_fen": 90640,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-12"
+    },
+    {
+      "claim_no": "BHC38N2",
+      "invoice_no": "26111118705013998750",
+      "applicant_id": "E1002",
+      "seller_tax_id": "9131011612FHARGJHK",
+      "issue_date": "2026-09-09",
+      "amount_fen": 199809,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-14"
+    },
+    {
+      "claim_no": "BHC39N1",
+      "invoice_no": "26368224278088195663",
+      "applicant_id": "E3002",
+      "seller_tax_id": "913101100P674R17G9",
+      "issue_date": "2026-09-15",
+      "amount_fen": 22720,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-09-20"
+    },
+    {
+      "claim_no": "BHC39N2",
+      "invoice_no": "26279787100268526955",
+      "applicant_id": "E1005",
+      "seller_tax_id": "91310114QG9QJF9WJ1",
+      "issue_date": "2026-09-06",
+      "amount_fen": 69467,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-09-11"
+    },
+    {
+      "claim_no": "BHC40N1",
+      "invoice_no": "26345574479042638678",
+      "applicant_id": "E1005",
+      "seller_tax_id": "91310114TA703MD9XD",
+      "issue_date": "2026-10-03",
+      "amount_fen": 165241,
+      "category": "meal",
+      "status": "rejected",
+      "submit_date": "2026-10-08"
+    },
+    {
+      "claim_no": "BHC41N1",
+      "invoice_no": "26317670866601121780",
+      "applicant_id": "E1004",
+      "seller_tax_id": "9131010000BNPDMYA3",
+      "issue_date": "2026-09-03",
+      "amount_fen": 122870,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-09-08"
+    },
+    {
+      "claim_no": "BHC42N1",
+      "invoice_no": "26299678830489480217",
+      "applicant_id": "E2002",
+      "seller_tax_id": "913101086TLUC4TTCD",
+      "issue_date": "2026-08-31",
+      "amount_fen": 91803,
+      "category": "lodging",
+      "status": "rejected",
+      "submit_date": "2026-09-05"
+    },
+    {
+      "claim_no": "BHC43N1",
+      "invoice_no": "26499743943916258747",
+      "applicant_id": "E1004",
+      "seller_tax_id": "91310109GA4BC3FMWN",
+      "issue_date": "2026-09-26",
+      "amount_fen": 113116,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-10-01"
+    },
+    {
+      "claim_no": "BHC45N1",
+      "invoice_no": "26327663073661102544",
+      "applicant_id": "E1001",
+      "seller_tax_id": "9131011606978B649W",
+      "issue_date": "2026-08-31",
+      "amount_fen": 89887,
+      "category": "lodging",
+      "status": "rejected",
+      "submit_date": "2026-09-05"
+    },
+    {
+      "claim_no": "BHC45N2",
+      "invoice_no": "26464577945064077907",
+      "applicant_id": "E1002",
+      "seller_tax_id": "91310109GC612NB6TW",
+      "issue_date": "2026-09-01",
+      "amount_fen": 169247,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-06"
+    },
+    {
+      "claim_no": "BHC47N1",
+      "invoice_no": "26431170757737347261",
+      "applicant_id": "E1002",
+      "seller_tax_id": "91310103C52YL6TKA5",
+      "issue_date": "2026-08-13",
+      "amount_fen": 34120,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-08-18"
+    },
+    {
+      "claim_no": "BHC48N1",
+      "invoice_no": "26377308116786326786",
+      "applicant_id": "E2002",
+      "seller_tax_id": "913101035NH9M50EA7",
+      "issue_date": "2026-09-17",
+      "amount_fen": 64899,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-22"
+    },
+    {
+      "claim_no": "BHC48N2",
+      "invoice_no": "26341657540445121115",
+      "applicant_id": "E1002",
+      "seller_tax_id": "91310119TX3M4C2E37",
+      "issue_date": "2026-09-20",
+      "amount_fen": 31127,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-25"
+    },
+    {
+      "claim_no": "BHC49N1",
+      "invoice_no": "26200369791561832803",
+      "applicant_id": "E2001",
+      "seller_tax_id": "913101181XYGFPKFHQ",
+      "issue_date": "2026-09-14",
+      "amount_fen": 82226,
+      "category": "lodging",
+      "status": "rejected",
+      "submit_date": "2026-09-19"
+    },
+    {
+      "claim_no": "BHC49N2",
+      "invoice_no": "26349357019949025828",
+      "applicant_id": "E1001",
+      "seller_tax_id": "9131010861751RQX7B",
+      "issue_date": "2026-09-08",
+      "amount_fen": 50139,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-09-13"
+    },
+    {
+      "claim_no": "BHC50N1",
+      "invoice_no": "26275707055723793192",
+      "applicant_id": "E1004",
+      "seller_tax_id": "91310117R33YCXMTK3",
+      "issue_date": "2026-09-07",
+      "amount_fen": 98564,
+      "category": "meal",
+      "status": "rejected",
+      "submit_date": "2026-09-12"
+    },
+    {
+      "claim_no": "BHC51N1",
+      "invoice_no": "26492033225867762792",
+      "applicant_id": "E2003",
+      "seller_tax_id": "9131011984N4F9HXYQ",
+      "issue_date": "2026-09-19",
+      "amount_fen": 47657,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-24"
+    },
+    {
+      "claim_no": "BHC51N2",
+      "invoice_no": "26115858844406747582",
+      "applicant_id": "E2002",
+      "seller_tax_id": "913101147E4WKGMH6R",
+      "issue_date": "2026-09-10",
+      "amount_fen": 42982,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-15"
+    },
+    {
+      "claim_no": "BHC52N1",
+      "invoice_no": "26331728209914491035",
+      "applicant_id": "E1005",
+      "seller_tax_id": "913101030RWTUEPQHN",
+      "issue_date": "2026-08-08",
+      "amount_fen": 171077,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-08-13"
+    },
+    {
+      "claim_no": "BHC52N2",
+      "invoice_no": "26117027331827742079",
+      "applicant_id": "E3001",
+      "seller_tax_id": "913101076NY9E6N25Y",
+      "issue_date": "2026-08-29",
+      "amount_fen": 183138,
+      "category": "meal",
+      "status": "rejected",
+      "submit_date": "2026-09-03"
+    },
+    {
+      "claim_no": "BHC53N1",
+      "invoice_no": "26284730737449864282",
+      "applicant_id": "E3002",
+      "seller_tax_id": "91310116H04N5CL96L",
+      "issue_date": "2026-09-06",
+      "amount_fen": 41380,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-11"
+    },
+    {
+      "claim_no": "BHC53N2",
+      "invoice_no": "26442988774818122623",
+      "applicant_id": "E1001",
+      "seller_tax_id": "91310107P2XD8C330D",
+      "issue_date": "2026-09-25",
+      "amount_fen": 46589,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-30"
+    },
+    {
+      "claim_no": "BHC54K1",
+      "invoice_no": "26496785110345060153",
+      "applicant_id": "E1002",
+      "seller_tax_id": "9131011336J0E2TF0P",
+      "issue_date": "2026-10-05",
+      "amount_fen": 72000,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-10-10"
+    },
+    {
+      "claim_no": "BHC55N1",
+      "invoice_no": "26236899704329738845",
+      "applicant_id": "E1005",
+      "seller_tax_id": "91310103G89CTRGDQR",
+      "issue_date": "2026-09-22",
+      "amount_fen": 114965,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-09-27"
+    },
+    {
+      "claim_no": "BHC55N2",
+      "invoice_no": "26421366104142186213",
+      "applicant_id": "E3002",
+      "seller_tax_id": "913101058D8EGE4WBB",
+      "issue_date": "2026-10-10",
+      "amount_fen": 177363,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-10-15"
+    },
+    {
+      "claim_no": "BHC57N1",
+      "invoice_no": "26204020894798797197",
+      "applicant_id": "E3001",
+      "seller_tax_id": "9131011469PWBCTCYG",
+      "issue_date": "2026-09-17",
+      "amount_fen": 44185,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-09-22"
+    },
+    {
+      "claim_no": "BHC59N1",
+      "invoice_no": "26211157089627244434",
+      "applicant_id": "E1003",
+      "seller_tax_id": "91310117TJU1H4REAP",
+      "issue_date": "2026-09-20",
+      "amount_fen": 68448,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-25"
+    },
+    {
+      "claim_no": "BHC59N2",
+      "invoice_no": "26481780521908664377",
+      "applicant_id": "E3002",
+      "seller_tax_id": "9131010643EFXKLHCT",
+      "issue_date": "2026-09-14",
+      "amount_fen": 194670,
+      "category": "meal",
+      "status": "rejected",
+      "submit_date": "2026-09-19"
+    },
+    {
+      "claim_no": "BHC60N1",
+      "invoice_no": "26190045803618622859",
+      "applicant_id": "E2001",
+      "seller_tax_id": "91310109XPPDGAPJUQ",
+      "issue_date": "2026-09-23",
+      "amount_fen": 148435,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-28"
+    },
+    {
+      "claim_no": "BHC60N2",
+      "invoice_no": "26295610497765259832",
+      "applicant_id": "E1001",
+      "seller_tax_id": "91310113MJ51K07MAG",
+      "issue_date": "2026-10-04",
+      "amount_fen": 28946,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-10-09"
+    }
+  ],
+  "faults": []
+}

@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110018",
+  "request_no": "SQ26100118",
+  "applicant": {
+    "name": "孙立群",
+    "employee_id": "E3001",
+    "grade": "D"
+  },
+  "category": "transport",
+  "from_city": "上海",
+  "city": "广州",
+  "start_date": "2026-10-26",
+  "end_date": "2026-10-28",
+  "purpose": "客户项目现场实施",
+  "amount_fen": 265000,
+  "submit_date": "2026-11-06",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

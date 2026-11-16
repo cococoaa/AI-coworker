@@ -1,0 +1,22 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26219214728222550625",
+      "issue_date": "2026-09-21",
+      "total_fen": 128000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101106FJ4NMP0UM",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "913101106FJ4NMP0UM",
+      "name": "云帆航空有限责任公司",
+      "city": "上海",
+      "status": "存续"
+    }
+  ],
+  "history": null,
+  "faults": null
+}

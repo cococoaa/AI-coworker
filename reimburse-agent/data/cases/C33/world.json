@@ -1,0 +1,45 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26396410290534891047",
+      "issue_date": "2026-10-26",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310109BKM3PMTR7X",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310109BKM3PMTR7X",
+      "name": "青岛望岳酒店管理有限公司",
+      "city": "青岛",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC33N1",
+      "invoice_no": "26242314470985926390",
+      "applicant_id": "E1004",
+      "seller_tax_id": "91310112GD5G9EBXDM",
+      "issue_date": "2026-10-02",
+      "amount_fen": 87295,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-10-07"
+    },
+    {
+      "claim_no": "BHC33N2",
+      "invoice_no": "26112369761227486618",
+      "applicant_id": "E1004",
+      "seller_tax_id": "91310117KF7M60BF2G",
+      "issue_date": "2026-09-22",
+      "amount_fen": 27955,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-27"
+    }
+  ],
+  "faults": null
+}

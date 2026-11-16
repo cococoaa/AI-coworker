@@ -1,0 +1,35 @@
+{
+  "_说明": "模型接入配置。本文件只放接入参数，密钥一律从环境变量读取；出现 api_key/key/secret/token 之类字段会被拒绝启动。以下划线开头的键是说明，会被忽略。",
+  "deepseek": {
+    "_说明": "第三方网关的 OpenAI 兼容接口。deepseek-chat 在该网关上 404，用 deepseek-v3.2。",
+    "provider": "deepseek",
+    "base_url": "https://api.openai-next.com",
+    "model": "deepseek-v3.2",
+    "api_key_env": "DEEPSEEK_API_KEY",
+    "timeout_sec": 120,
+    "max_retries": 1,
+    "max_tokens": 4096,
+    "temperature": 0,
+    "json_mode": true,
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "price_in_per_mtok": 0.30,
+    "price_out_per_mtok": 1.20,
+    "price_note": "按 DeepSeek 官方列表价估算（峰时），第三方网关实际计价可能不同"
+  },
+  "claude": {
+    "_说明": "同一网关的 Anthropic 兼容接口，模型名为 claude-sonnet-5-5。网关会拦非浏览器 UA（Cloudflare 1010），必须带 user_agent。",
+    "provider": "claude",
+    "base_url": "https://api.openai-next.com",
+    "model": "claude-sonnet-5-5",
+    "api_key_env": "ANTHROPIC_API_KEY",
+    "timeout_sec": 120,
+    "max_retries": 1,
+    "max_tokens": 4096,
+    "temperature": 0,
+    "json_mode": true,
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "price_in_per_mtok": 2.00,
+    "price_out_per_mtok": 10.00,
+    "price_note": "按 Sonnet 5.5 官方列表价估算，第三方网关实际计价可能不同"
+  }
+}

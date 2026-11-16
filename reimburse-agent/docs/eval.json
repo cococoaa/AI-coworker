@@ -1,0 +1,1247 @@
+{
+  "summary": {
+    "total": 60,
+    "decision_ok": 60,
+    "approved_ok": 60,
+    "hits_ok": 60,
+    "decision_rate": 1,
+    "hits_precision": 1,
+    "hits_recall": 1,
+    "approved_mae_fen": 0,
+    "by_decision": {
+      "approve": 16,
+      "approve_with_adjustment": 3,
+      "manual_review": 21,
+      "need_more_info": 8,
+      "reject": 12
+    },
+    "by_category": {
+      "lodging": 17,
+      "meal": 21,
+      "transport": 22
+    },
+    "total_cost_usd": 0,
+    "avg_cost_usd": 0,
+    "total_elapsed_ms": 79,
+    "mode": "合成抽取（无密钥演示模式）",
+    "at": "2026-11-16 18:39:44",
+    "check_covered": 26,
+    "check_total": 26,
+    "approved_cases": 19
+  },
+  "outcomes": [
+    {
+      "id": "C01",
+      "title": "普通员工乘高铁二等座，材料齐全",
+      "category": "transport",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 55300,
+      "approved_got_fen": 55300,
+      "events": 28,
+      "elapsed_ms": 3,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C02",
+      "title": "普通员工乘飞机经济舱，材料齐全",
+      "category": "transport",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 128000,
+      "approved_got_fen": 128000,
+      "events": 28,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C03",
+      "title": "二线城市住2晚，夜均380元，低于限额400元",
+      "category": "lodging",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 76000,
+      "approved_got_fen": 76000,
+      "events": 30,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C04",
+      "title": "5人工作餐，人均84元",
+      "category": "meal",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 42000,
+      "approved_got_fen": 42000,
+      "events": 31,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C05",
+      "title": "3内3外业务招待1500元，人均250元，未达审批线",
+      "category": "meal",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 150000,
+      "approved_got_fen": 150000,
+      "events": 29,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C06",
+      "title": "12人招待3400元，达到审批线且已有事前审批号",
+      "category": "meal",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 340000,
+      "approved_got_fen": 340000,
+      "events": 31,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C07",
+      "title": "三线城市普通员工夜均恰为限额300元，不算超标",
+      "category": "lodging",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 60000,
+      "approved_got_fen": 60000,
+      "events": 30,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C08",
+      "title": "一线城市普通员工夜均超限额1分，按限额核准",
+      "category": "lodging",
+      "expected": "approve_with_adjustment",
+      "got": "approve_with_adjustment",
+      "hits_expected": [
+        "R10-a"
+      ],
+      "hits_got": [
+        "R10-a"
+      ],
+      "approved_expected_fen": 50000,
+      "approved_got_fen": 50000,
+      "events": 31,
+      "elapsed_ms": 3,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C09",
+      "title": "4人招待人均恰为上限300元，不算超标",
+      "category": "meal",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 120000,
+      "approved_got_fen": 120000,
+      "events": 29,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C10",
+      "title": "提交日距出差结束日恰好30天，不算超期",
+      "category": "transport",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 48600,
+      "approved_got_fen": 48600,
+      "events": 28,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C11",
+      "title": "提交日距出差结束日31天，超期",
+      "category": "transport",
+      "expected": "need_more_info",
+      "got": "need_more_info",
+      "hits_expected": [
+        "R07-a"
+      ],
+      "hits_got": [
+        "R07-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 29,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C12",
+      "title": "招待1999.99元，差1分到审批线，无审批号也不需要",
+      "category": "meal",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 199999,
+      "approved_got_fen": 199999,
+      "events": 29,
+      "elapsed_ms": 0,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C13",
+      "title": "招待恰为2000元，达到审批线，缺事前审批号",
+      "category": "meal",
+      "expected": "need_more_info",
+      "got": "need_more_info",
+      "hits_expected": [
+        "R05-a"
+      ],
+      "hits_got": [
+        "R05-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 31,
+      "elapsed_ms": 0,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C14",
+      "title": "乘车日早于出差开始日1天，在交通缓冲期内",
+      "category": "transport",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 47000,
+      "approved_got_fen": 47000,
+      "events": 28,
+      "elapsed_ms": 0,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C15",
+      "title": "火车票往返同日同额同销售方，号码不同，属正常往返不判重复",
+      "category": "transport",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 55300,
+      "approved_got_fen": 55300,
+      "events": 28,
+      "elapsed_ms": 6,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C16",
+      "title": "招待1500元，3天前同店已报1200元，窗口内合计超审批线",
+      "category": "meal",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R05-b"
+      ],
+      "hits_got": [
+        "R05-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 30,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C17",
+      "title": "招待1500元，4天前同店已报1200元，已出窗口不合并",
+      "category": "meal",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 150000,
+      "approved_got_fen": 150000,
+      "events": 29,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C18",
+      "title": "总监乘公务舱，职级允许",
+      "category": "transport",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 265000,
+      "approved_got_fen": 265000,
+      "events": 28,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C19",
+      "title": "同一发票此前被驳回，修正后重新提交，不算重复",
+      "category": "lodging",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 70000,
+      "approved_got_fen": 70000,
+      "events": 30,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C20",
+      "title": "发票已作废",
+      "category": "transport",
+      "expected": "reject",
+      "got": "reject",
+      "hits_expected": [
+        "R01-a"
+      ],
+      "hits_got": [
+        "R01-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 29,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C21",
+      "title": "发票已红字冲销",
+      "category": "lodging",
+      "expected": "reject",
+      "got": "reject",
+      "hits_expected": [
+        "R01-a"
+      ],
+      "hits_got": [
+        "R01-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 31,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C22",
+      "title": "税务平台查无此票",
+      "category": "meal",
+      "expected": "reject",
+      "got": "reject",
+      "hits_expected": [
+        "R01-b"
+      ],
+      "hits_got": [
+        "R01-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 33,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C23",
+      "title": "查验库登记金额与发票面额不一致（疑似篡改）",
+      "category": "transport",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R01-c"
+      ],
+      "hits_got": [
+        "R01-c"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 28,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C24",
+      "title": "个人抬头，无购买方税号",
+      "category": "transport",
+      "expected": "reject",
+      "got": "reject",
+      "hits_expected": [
+        "R02-a",
+        "R02-b"
+      ],
+      "hits_got": [
+        "R02-a",
+        "R02-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 30,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C25",
+      "title": "抬头为公司旧名称，税号一致",
+      "category": "lodging",
+      "expected": "reject",
+      "got": "reject",
+      "hits_expected": [
+        "R02-a"
+      ],
+      "hits_got": [
+        "R02-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 31,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C26",
+      "title": "购买方税号校验位错误",
+      "category": "meal",
+      "expected": "reject",
+      "got": "reject",
+      "hits_expected": [
+        "R02-b"
+      ],
+      "hits_got": [
+        "R02-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 32,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C27",
+      "title": "住宿报销单，发票项目却是餐饮服务",
+      "category": "lodging",
+      "expected": "reject",
+      "got": "reject",
+      "hits_expected": [
+        "R03-a"
+      ],
+      "hits_got": [
+        "R03-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 31,
+      "elapsed_ms": 0,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C28",
+      "title": "招待消费清单含白酒",
+      "category": "meal",
+      "expected": "reject",
+      "got": "reject",
+      "hits_expected": [
+        "R03-b"
+      ],
+      "hits_got": [
+        "R03-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 30,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C29",
+      "title": "同一发票号码已有通过的报销记录",
+      "category": "lodging",
+      "expected": "reject",
+      "got": "reject",
+      "hits_expected": [
+        "R04-a"
+      ],
+      "hits_got": [
+        "R04-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 31,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C30",
+      "title": "机票：同人同销售方同日同额，发票号不同（疑似换票重报）",
+      "category": "transport",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R04-b"
+      ],
+      "hits_got": [
+        "R04-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 29,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C31",
+      "title": "招待拆分：同日同店两笔，各自未到审批线，合计超线",
+      "category": "meal",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R05-b"
+      ],
+      "hits_got": [
+        "R05-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 30,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C32",
+      "title": "前一天同店已有2500元招待（已过审批线），本单不算拆分",
+      "category": "meal",
+      "expected": "approve",
+      "got": "approve",
+      "hits_expected": [],
+      "hits_got": [],
+      "approved_expected_fen": 150000,
+      "approved_got_fen": 150000,
+      "events": 29,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C33",
+      "title": "申请金额比发票多50元",
+      "category": "lodging",
+      "expected": "reject",
+      "got": "reject",
+      "hits_expected": [
+        "R06-a"
+      ],
+      "hits_got": [
+        "R06-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 31,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C34",
+      "title": "行程单合计与发票价税合计不一致",
+      "category": "transport",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R06-b"
+      ],
+      "hits_got": [
+        "R06-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 29,
+      "elapsed_ms": 0,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C35",
+      "title": "乘车日早于出差开始日3天，超出缓冲期",
+      "category": "transport",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R08-a"
+      ],
+      "hits_got": [
+        "R08-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 29,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C36",
+      "title": "离店日晚于申请单结束日",
+      "category": "lodging",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R08-a"
+      ],
+      "hits_got": [
+        "R08-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 31,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C37",
+      "title": "普通员工乘一等座，无特批",
+      "category": "transport",
+      "expected": "need_more_info",
+      "got": "need_more_info",
+      "hits_expected": [
+        "R09-a"
+      ],
+      "hits_got": [
+        "R09-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 29,
+      "elapsed_ms": 0,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C38",
+      "title": "普通员工乘一等座，填有特批编号（真伪待人工确认）",
+      "category": "transport",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R09-b"
+      ],
+      "hits_got": [
+        "R09-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 29,
+      "elapsed_ms": 3,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C39",
+      "title": "工作餐人均140元，超过100元",
+      "category": "meal",
+      "expected": "approve_with_adjustment",
+      "got": "approve_with_adjustment",
+      "hits_expected": [
+        "R11-a"
+      ],
+      "hits_got": [
+        "R11-a"
+      ],
+      "approved_expected_fen": 40000,
+      "approved_got_fen": 40000,
+      "events": 32,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C40",
+      "title": "招待人均350元，超过300元",
+      "category": "meal",
+      "expected": "approve_with_adjustment",
+      "got": "approve_with_adjustment",
+      "hits_expected": [
+        "R11-a"
+      ],
+      "hits_got": [
+        "R11-a"
+      ],
+      "approved_expected_fen": 120000,
+      "approved_got_fen": 120000,
+      "events": 30,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C41",
+      "title": "行程单乘车人不是申请人",
+      "category": "transport",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R12-a"
+      ],
+      "hits_got": [
+        "R12-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 29,
+      "elapsed_ms": 0,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C42",
+      "title": "销售方已注销",
+      "category": "meal",
+      "expected": "reject",
+      "got": "reject",
+      "hits_expected": [
+        "R13-a"
+      ],
+      "hits_got": [
+        "R13-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 31,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C43",
+      "title": "销售方列入经营异常",
+      "category": "lodging",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R13-b"
+      ],
+      "hits_got": [
+        "R13-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 31,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C44",
+      "title": "缺行程单",
+      "category": "transport",
+      "expected": "need_more_info",
+      "got": "need_more_info",
+      "hits_expected": [
+        "R14-a"
+      ],
+      "hits_got": [
+        "R14-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 34,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C45",
+      "title": "报销单缺申请单号",
+      "category": "transport",
+      "expected": "need_more_info",
+      "got": "need_more_info",
+      "hits_expected": [
+        "R14-b"
+      ],
+      "hits_got": [
+        "R14-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 29,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C46",
+      "title": "招待餐饮缺招待对象单位",
+      "category": "meal",
+      "expected": "need_more_info",
+      "got": "need_more_info",
+      "hits_expected": [
+        "R14-b"
+      ],
+      "hits_got": [
+        "R14-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 30,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C47",
+      "title": "叠加：发票作废、抬头为旧名称、销售方注销",
+      "category": "lodging",
+      "expected": "reject",
+      "got": "reject",
+      "hits_expected": [
+        "R01-a",
+        "R02-a",
+        "R13-a"
+      ],
+      "hits_got": [
+        "R01-a",
+        "R02-a",
+        "R13-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 33,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C48",
+      "title": "叠加：超期、席别超标、缺申请单号，三项都是补材料",
+      "category": "transport",
+      "expected": "need_more_info",
+      "got": "need_more_info",
+      "hits_expected": [
+        "R07-a",
+        "R09-a",
+        "R14-b"
+      ],
+      "hits_got": [
+        "R07-a",
+        "R09-a",
+        "R14-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 31,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C49",
+      "title": "叠加：住宿超标（本可调整）又疑似代订，转人工压过调整",
+      "category": "lodging",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R10-a",
+        "R12-a"
+      ],
+      "hits_got": [
+        "R10-a",
+        "R12-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 32,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C50",
+      "title": "叠加：招待人均超标且达审批线无审批号，补材料压过调整",
+      "category": "meal",
+      "expected": "need_more_info",
+      "got": "need_more_info",
+      "hits_expected": [
+        "R05-a",
+        "R11-a"
+      ],
+      "hits_got": [
+        "R05-a",
+        "R11-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 32,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C51",
+      "title": "发票查验超时（状态未知，不能当作通过）",
+      "category": "transport",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R15-a"
+      ],
+      "hits_got": [
+        "R15-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 32,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C52",
+      "title": "发票实为作废，但查验返回乱码，只能转人工，不得凭猜测驳回或通过",
+      "category": "lodging",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R15-a"
+      ],
+      "hits_got": [
+        "R15-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 34,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C53",
+      "title": "销售方实为注销，但企业核验报错，转人工",
+      "category": "meal",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R15-a"
+      ],
+      "hits_got": [
+        "R15-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 33,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C54",
+      "title": "发票实为重复报销，但历史查重超时，转人工",
+      "category": "lodging",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R15-a"
+      ],
+      "hits_got": [
+        "R15-a"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 32,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C55",
+      "title": "发票金额污损无法辨认，住宿超标项不作判定",
+      "category": "lodging",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R15-b"
+      ],
+      "hits_got": [
+        "R15-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 31,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C56",
+      "title": "购买方税号污损且本身有误，不据污损值驳回，转人工",
+      "category": "meal",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R15-b"
+      ],
+      "hits_got": [
+        "R15-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 33,
+      "elapsed_ms": 2,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C57",
+      "title": "发票号码污损，无法查验，转人工",
+      "category": "transport",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R15-b"
+      ],
+      "hits_got": [
+        "R15-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 28,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C58",
+      "title": "销售方税号污损，无法核验企业状态，转人工",
+      "category": "lodging",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R15-b"
+      ],
+      "hits_got": [
+        "R15-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 29,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C59",
+      "title": "开票日期污损，转人工",
+      "category": "transport",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R15-b"
+      ],
+      "hits_got": [
+        "R15-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 30,
+      "elapsed_ms": 1,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    },
+    {
+      "id": "C60",
+      "title": "两个工具同时故障且金额污损",
+      "category": "meal",
+      "expected": "manual_review",
+      "got": "manual_review",
+      "hits_expected": [
+        "R15-a",
+        "R15-b"
+      ],
+      "hits_got": [
+        "R15-a",
+        "R15-b"
+      ],
+      "approved_expected_fen": 0,
+      "approved_got_fen": 0,
+      "events": 35,
+      "elapsed_ms": 0,
+      "cost_usd": 0,
+      "decision_ok": true,
+      "approved_ok": true,
+      "hits_ok": true
+    }
+  ],
+  "failures": null
+}

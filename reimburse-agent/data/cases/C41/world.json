@@ -1,0 +1,35 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26405372675637039389",
+      "issue_date": "2026-10-15",
+      "total_fen": 55300,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310103692B6R5G35",
+      "name": "东海铁路客运服务有限公司",
+      "city": "上海",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC41N1",
+      "invoice_no": "26317670866601121780",
+      "applicant_id": "E1004",
+      "seller_tax_id": "9131010000BNPDMYA3",
+      "issue_date": "2026-09-03",
+      "amount_fen": 122870,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-09-08"
+    }
+  ],
+  "faults": null
+}

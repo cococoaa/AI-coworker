@@ -1,0 +1,46 @@
+{
+  "id": "C03",
+  "title": "二线城市住2晚，夜均380元，低于限额400元",
+  "tags": [
+    "lodging",
+    "clean"
+  ],
+  "decision": "approve",
+  "hits": [],
+  "approved_fen": 76000,
+  "invoice": {
+    "invoice_no": "26173320491881669346",
+    "issue_date": "2026-10-02",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "成都望岳酒店管理有限公司",
+    "seller_tax_id": "91310108311WXRE501",
+    "item_name": "*住宿服务*住宿费",
+    "tax_rate_pct": 6,
+    "ex_tax_fen": 71698,
+    "tax_fen": 4302,
+    "total_fen": 76000
+  },
+  "support": {
+    "kind": "folio",
+    "person": "王子轩",
+    "hotel": "望岳酒店(成都中心店)",
+    "city": "成都",
+    "check_in": "2026-09-30",
+    "check_out": "2026-10-02",
+    "nights": 2,
+    "lines": [
+      {
+        "date": "2026-09-30",
+        "name": "房费",
+        "amount_fen": 38000
+      },
+      {
+        "date": "2026-10-01",
+        "name": "房费",
+        "amount_fen": 38000
+      }
+    ],
+    "total_fen": 76000
+  }
+}

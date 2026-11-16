@@ -1,0 +1,23 @@
+{
+  "claim_no": "BX26110050",
+  "request_no": "SQ26100150",
+  "applicant": {
+    "name": "何婉清",
+    "employee_id": "E3002",
+    "grade": "D"
+  },
+  "category": "meal",
+  "city": "广州",
+  "start_date": "2026-10-01",
+  "end_date": "2026-10-01",
+  "purpose": "接待合作方项目评审",
+  "amount_fen": 250000,
+  "submit_date": "2026-10-10",
+  "internal_count": 3,
+  "external_count": 3,
+  "external_org": "远景新能源有限公司",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

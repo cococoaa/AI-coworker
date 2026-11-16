@@ -1,0 +1,65 @@
+{
+  "id": "C26",
+  "title": "购买方税号校验位错误",
+  "tags": [
+    "meal",
+    "violation"
+  ],
+  "decision": "reject",
+  "hits": [
+    "R02-b"
+  ],
+  "approved_fen": 0,
+  "invoice": {
+    "invoice_no": "26180672070715148994",
+    "issue_date": "2026-10-27",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K1",
+    "seller_name": "宁波川味坊餐饮管理有限公司",
+    "seller_tax_id": "9131010670G0XXYK0A",
+    "item_name": "*餐饮服务*餐费",
+    "tax_rate_pct": 6,
+    "ex_tax_fen": 37736,
+    "tax_fen": 2264,
+    "total_fen": 40000
+  },
+  "support": {
+    "kind": "consumption",
+    "date": "2026-10-27",
+    "city": "宁波",
+    "venue": "宁波川味坊",
+    "lines": [
+      {
+        "name": "蒜蓉粉丝虾",
+        "qty": 2,
+        "amount_fen": 11111
+      },
+      {
+        "name": "宫保鸡丁",
+        "qty": 2,
+        "amount_fen": 6666
+      },
+      {
+        "name": "果盘",
+        "qty": 2,
+        "amount_fen": 4444
+      },
+      {
+        "name": "时令蔬菜",
+        "qty": 2,
+        "amount_fen": 2222
+      },
+      {
+        "name": "凉拌黄瓜",
+        "qty": 1,
+        "amount_fen": 8888
+      },
+      {
+        "name": "饮料",
+        "qty": 1,
+        "amount_fen": 6669
+      }
+    ],
+    "total_fen": 40000
+  }
+}

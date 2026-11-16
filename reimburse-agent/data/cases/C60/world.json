@@ -1,0 +1,57 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26207499687437581384",
+      "issue_date": "2026-10-22",
+      "total_fen": 150000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101161C6Y62KMH1",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "913101161C6Y62KMH1",
+      "name": "深圳老街味道餐饮管理有限公司",
+      "city": "深圳",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC60N1",
+      "invoice_no": "26190045803618622859",
+      "applicant_id": "E2001",
+      "seller_tax_id": "91310109XPPDGAPJUQ",
+      "issue_date": "2026-09-23",
+      "amount_fen": 148435,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-28"
+    },
+    {
+      "claim_no": "BHC60N2",
+      "invoice_no": "26295610497765259832",
+      "applicant_id": "E1001",
+      "seller_tax_id": "91310113MJ51K07MAG",
+      "issue_date": "2026-10-04",
+      "amount_fen": 28946,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-10-09"
+    }
+  ],
+  "faults": [
+    {
+      "tool": "verify_invoice",
+      "key": "26207499687437581384",
+      "mode": "timeout"
+    },
+    {
+      "tool": "check_company",
+      "key": "913101161C6Y62KMH1",
+      "mode": "error"
+    }
+  ]
+}

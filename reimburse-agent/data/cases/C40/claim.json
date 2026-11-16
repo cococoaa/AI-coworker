@@ -1,0 +1,23 @@
+{
+  "claim_no": "BX26110040",
+  "request_no": "SQ26100140",
+  "applicant": {
+    "name": "郑浩然",
+    "employee_id": "E2003",
+    "grade": "M"
+  },
+  "category": "meal",
+  "city": "青岛",
+  "start_date": "2026-10-25",
+  "end_date": "2026-10-25",
+  "purpose": "接待客户商务洽谈",
+  "amount_fen": 140000,
+  "submit_date": "2026-10-30",
+  "internal_count": 2,
+  "external_count": 2,
+  "external_org": "启明医疗科技有限公司",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

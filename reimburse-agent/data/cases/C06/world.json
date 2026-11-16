@@ -1,0 +1,35 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26400992317037169739",
+      "issue_date": "2026-10-20",
+      "total_fen": 340000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310109M3F9C00UE0",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310109M3F9C00UE0",
+      "name": "合肥食尚汇餐饮管理有限公司",
+      "city": "合肥",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC06N1",
+      "invoice_no": "26380120735323957726",
+      "applicant_id": "E3001",
+      "seller_tax_id": "91310108XL0YPK9W13",
+      "issue_date": "2026-09-25",
+      "amount_fen": 198188,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-09-30"
+    }
+  ],
+  "faults": null
+}

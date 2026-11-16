@@ -1,0 +1,47 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26419429437566340186",
+      "issue_date": "2026-10-05",
+      "total_fen": 56000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310114U4E3NEJR29",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310114U4E3NEJR29",
+      "name": "西安聚贤楼餐饮管理有限公司",
+      "city": "西安",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC39N1",
+      "invoice_no": "26368224278088195663",
+      "applicant_id": "E3002",
+      "seller_tax_id": "913101100P674R17G9",
+      "issue_date": "2026-09-15",
+      "amount_fen": 22720,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-09-20"
+    },
+    {
+      "claim_no": "BHC39N2",
+      "invoice_no": "26279787100268526955",
+      "applicant_id": "E1005",
+      "seller_tax_id": "91310114QG9QJF9WJ1",
+      "issue_date": "2026-09-06",
+      "amount_fen": 69467,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-09-11"
+    }
+  ],
+  "faults": null
+}

@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110045",
+  "request_no": "",
+  "applicant": {
+    "name": "刘子豪",
+    "employee_id": "E1005",
+    "grade": "P"
+  },
+  "category": "transport",
+  "from_city": "上海",
+  "city": "宁波",
+  "start_date": "2026-10-08",
+  "end_date": "2026-10-10",
+  "purpose": "客户项目现场实施",
+  "amount_fen": 55300,
+  "submit_date": "2026-10-15",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

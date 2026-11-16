@@ -1,0 +1,34 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26334764353493803100",
+      "issue_date": "2026-10-23",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103AEAFLCAA04",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310103AEAFLCAA04",
+      "name": "青岛云舍酒店管理有限公司",
+      "city": "青岛",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC29K1",
+      "invoice_no": "26334764353493803100",
+      "applicant_id": "E1002",
+      "seller_tax_id": "91310103AEAFLCAA04",
+      "issue_date": "2026-10-23",
+      "amount_fen": 72000,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-10-28"
+    }
+  ],
+  "faults": null
+}

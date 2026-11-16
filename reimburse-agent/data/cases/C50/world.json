@@ -1,0 +1,34 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26199484984161574052",
+      "issue_date": "2026-10-01",
+      "total_fen": 250000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103QGWE9YHKHN",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310103QGWE9YHKHN",
+      "name": "广州川味坊餐饮管理有限公司",
+      "city": "广州",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC50N1",
+      "invoice_no": "26275707055723793192",
+      "applicant_id": "E1004",
+      "seller_tax_id": "91310117R33YCXMTK3",
+      "issue_date": "2026-09-07",
+      "amount_fen": 98564,
+      "category": "meal",
+      "status": "rejected",
+      "submit_date": "2026-09-12"
+    }
+  ],
+  "faults": null
+}

@@ -1,0 +1,35 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26385707484295593027",
+      "issue_date": "2026-09-24",
+      "total_fen": 50001,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101081DG7C6WKMU",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "913101081DG7C6WKMU",
+      "name": "深圳安澜酒店管理有限公司",
+      "city": "深圳",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC08N1",
+      "invoice_no": "26396299647472907647",
+      "applicant_id": "E1003",
+      "seller_tax_id": "91310112149GFRQPQ5",
+      "issue_date": "2026-08-10",
+      "amount_fen": 129726,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-08-15"
+    }
+  ],
+  "faults": null
+}

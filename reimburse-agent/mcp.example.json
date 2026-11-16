@@ -1,0 +1,28 @@
+{
+  "_说明": "MCP 客户端配置示例。stdio 方式适合本机；http 方式适合跨机。令牌不要写死在文件里，优先用环境变量插值。",
+  "mcpServers": {
+    "reimburse-verify-local": {
+      "_说明": "本机 stdio，由客户端拉起进程，不需要令牌",
+      "type": "stdio",
+      "command": "verify-mcp",
+      "args": ["-data", "data/world.json"],
+      "env": {}
+    },
+    "reimburse-verify-lan": {
+      "_说明": "跨机 HTTP。URL 换成服务端局域网 IP；令牌通过环境变量 REIMBURSE_MCP_TOKEN 提供时会自动带上，不要在这里明文写死",
+      "type": "http",
+      "url": "http://192.168.1.20:8791/mcp",
+      "headers": {
+        "Authorization": "Bearer ${REIMBURSE_MCP_TOKEN}"
+      }
+    },
+    "reimburse-verify-lan-no-interp": {
+      "_说明": "客户端不支持环境变量插值时，只能明文写令牌。这个文件不要提交仓库，放在用户目录并限制权限（Linux: chmod 600）",
+      "type": "http",
+      "url": "http://192.168.1.20:8791/mcp",
+      "headers": {
+        "Authorization": "Bearer 换成与 REIMBURSE_MCP_TOKENS 里一致的令牌"
+      }
+    }
+  }
+}

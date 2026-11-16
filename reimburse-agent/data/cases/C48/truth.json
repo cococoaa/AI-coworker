@@ -1,0 +1,45 @@
+{
+  "id": "C48",
+  "title": "叠加：超期、席别超标、缺申请单号，三项都是补材料",
+  "tags": [
+    "transport",
+    "combo"
+  ],
+  "decision": "need_more_info",
+  "hits": [
+    "R07-a",
+    "R09-a",
+    "R14-b"
+  ],
+  "approved_fen": 0,
+  "invoice": {
+    "invoice_no": "26361341969690311529",
+    "issue_date": "2026-10-17",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "东海铁路客运服务有限公司",
+    "seller_tax_id": "91310103692B6R5G35",
+    "item_name": "*运输服务*铁路旅客运输",
+    "tax_rate_pct": 9,
+    "ex_tax_fen": 84404,
+    "tax_fen": 7596,
+    "total_fen": 92000
+  },
+  "support": {
+    "kind": "itinerary",
+    "mode": "train",
+    "person": "陈思远",
+    "date": "2026-10-17",
+    "vehicle": "G2966",
+    "from": "上海",
+    "to": "杭州",
+    "seat": "一等座",
+    "lines": [
+      {
+        "name": "票价",
+        "amount_fen": 92000
+      }
+    ],
+    "total_fen": 92000
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110057",
+  "request_no": "SQ26100157",
+  "applicant": {
+    "name": "陈思远",
+    "employee_id": "E1001",
+    "grade": "P"
+  },
+  "category": "transport",
+  "from_city": "上海",
+  "city": "成都",
+  "start_date": "2026-10-18",
+  "end_date": "2026-10-20",
+  "purpose": "项目验收与回访",
+  "amount_fen": 55300,
+  "submit_date": "2026-10-28",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

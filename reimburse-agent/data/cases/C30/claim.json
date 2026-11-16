@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110030",
+  "request_no": "SQ26100130",
+  "applicant": {
+    "name": "林晓雯",
+    "employee_id": "E1002",
+    "grade": "P"
+  },
+  "category": "transport",
+  "from_city": "上海",
+  "city": "北京",
+  "start_date": "2026-10-07",
+  "end_date": "2026-10-09",
+  "purpose": "客户项目现场实施",
+  "amount_fen": 98000,
+  "submit_date": "2026-10-14",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

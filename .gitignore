@@ -1,0 +1,23 @@
+# 构建产物与运行时文件
+dist/
+*.exe
+*.exe~
+*.log
+*.out
+
+# 临时文件
+*.tmp
+*.swp
+
+# 密钥与本地配置（仓库里只允许 config.example.json）
+config.json
+tokens.txt
+.env
+
+# 工具与 IDE
+.box-agent/
+.box-agent-scratch/
+.playwright-mcp/
+.idea/
+.vscode/
+.DS_Store

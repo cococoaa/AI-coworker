@@ -1,0 +1,53 @@
+{
+  "id": "C09",
+  "title": "4人招待人均恰为上限300元，不算超标",
+  "tags": [
+    "meal",
+    "boundary"
+  ],
+  "decision": "approve",
+  "hits": [],
+  "approved_fen": 120000,
+  "invoice": {
+    "invoice_no": "26412448897242106757",
+    "issue_date": "2026-10-14",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "苏州聚贤楼餐饮管理有限公司",
+    "seller_tax_id": "91310112X938AW0EWD",
+    "item_name": "*餐饮服务*餐费",
+    "tax_rate_pct": 6,
+    "ex_tax_fen": 113208,
+    "tax_fen": 6792,
+    "total_fen": 120000
+  },
+  "support": {
+    "kind": "consumption",
+    "date": "2026-10-14",
+    "city": "苏州",
+    "venue": "苏州聚贤楼",
+    "lines": [
+      {
+        "name": "酸辣汤",
+        "qty": 1,
+        "amount_fen": 26666
+      },
+      {
+        "name": "红烧鲫鱼",
+        "qty": 2,
+        "amount_fen": 40000
+      },
+      {
+        "name": "清蒸鲈鱼",
+        "qty": 1,
+        "amount_fen": 13333
+      },
+      {
+        "name": "干锅花菜",
+        "qty": 1,
+        "amount_fen": 40001
+      }
+    ],
+    "total_fen": 120000
+  }
+}

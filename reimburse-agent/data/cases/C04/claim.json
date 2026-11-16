@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110004",
+  "request_no": "SQ26100104",
+  "applicant": {
+    "name": "郑浩然",
+    "employee_id": "E2003",
+    "grade": "M"
+  },
+  "category": "meal",
+  "city": "西安",
+  "start_date": "2026-10-04",
+  "end_date": "2026-10-04",
+  "purpose": "项目组加班工作餐",
+  "amount_fen": 42000,
+  "submit_date": "2026-10-09",
+  "internal_count": 5,
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

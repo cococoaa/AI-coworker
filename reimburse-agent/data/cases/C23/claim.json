@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110023",
+  "request_no": "SQ26100123",
+  "applicant": {
+    "name": "吴静怡",
+    "employee_id": "E2002",
+    "grade": "M"
+  },
+  "category": "transport",
+  "from_city": "上海",
+  "city": "北京",
+  "start_date": "2026-10-01",
+  "end_date": "2026-10-03",
+  "purpose": "供应商现场评审",
+  "amount_fen": 98000,
+  "submit_date": "2026-10-11",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

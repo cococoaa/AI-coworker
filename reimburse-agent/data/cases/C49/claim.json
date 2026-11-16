@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110049",
+  "request_no": "SQ26100149",
+  "applicant": {
+    "name": "林晓雯",
+    "employee_id": "E1002",
+    "grade": "P"
+  },
+  "category": "lodging",
+  "from_city": "上海",
+  "city": "深圳",
+  "start_date": "2026-10-18",
+  "end_date": "2026-10-19",
+  "purpose": "培训与技术支持",
+  "amount_fen": 62000,
+  "submit_date": "2026-10-25",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

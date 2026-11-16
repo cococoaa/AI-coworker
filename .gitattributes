@@ -1,0 +1,7 @@
+# 统一按 LF 存储，避免 Windows 检出时产生大量换行差异
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary
+*.webp binary
+*.exe binary

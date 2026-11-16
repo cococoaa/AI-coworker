@@ -1,0 +1,87 @@
+{
+  "at": "2026-11-16T17:44:23.9651453+08:00",
+  "at_text": "2026-11-16 17:44:23",
+  "cases": [
+    {
+      "name": "工具故障：发票查验超时",
+      "purpose": "查验超时属状态未知，必须转人工，不得当作查无此票驳回",
+      "case_id": "C01",
+      "decision": "manual_review",
+      "accept": [
+        "manual_review"
+      ],
+      "hits": [
+        "R15-a"
+      ],
+      "events": 32,
+      "unverified": [
+        "verify_invoice"
+      ],
+      "warnings": [
+        "本次抽取使用合成演示数据（A 侧），不代表任何模型的实际能力",
+        "本次抽取使用合成演示数据（B 侧），不代表任何模型的实际能力",
+        "发票查验 超时，相关判定项不作判定"
+      ],
+      "passed": true,
+      "elapsed_ms": 0
+    },
+    {
+      "name": "模型超时：Claude 不可用",
+      "purpose": "只剩一个模型时关键字段无交叉校验，必须转人工",
+      "case_id": "C01",
+      "decision": "manual_review",
+      "accept": [
+        "manual_review"
+      ],
+      "hits": [
+        "R15-b"
+      ],
+      "events": 29,
+      "warnings": [
+        "本次抽取使用合成演示数据（A 侧），不代表任何模型的实际能力",
+        "只有 DeepSeek 抽取成功，关键字段缺少交叉校验，按未核验转人工"
+      ],
+      "passed": true,
+      "elapsed_ms": 0
+    },
+    {
+      "name": "单模型不可用：关闭 DeepSeek",
+      "purpose": "同上，且要在事件流里看到被关闭的原因",
+      "case_id": "C03",
+      "decision": "manual_review",
+      "accept": [
+        "manual_review"
+      ],
+      "hits": [
+        "R15-b"
+      ],
+      "events": 31,
+      "warnings": [
+        "本次抽取使用合成演示数据（B 侧），不代表任何模型的实际能力",
+        "只有 Claude 抽取成功，关键字段缺少交叉校验，按未核验转人工"
+      ],
+      "passed": true,
+      "elapsed_ms": 0
+    },
+    {
+      "name": "对照：一切正常",
+      "purpose": "链路完好时应按标准答案自动通过",
+      "case_id": "C01",
+      "decision": "approve",
+      "accept": [
+        "approve"
+      ],
+      "hits": null,
+      "events": 28,
+      "warnings": [
+        "本次抽取使用合成演示数据（A 侧），不代表任何模型的实际能力",
+        "本次抽取使用合成演示数据（B 侧），不代表任何模型的实际能力"
+      ],
+      "passed": true,
+      "elapsed_ms": 0
+    }
+  ],
+  "passed": 4,
+  "total": 4,
+  "all_ok": true
+}

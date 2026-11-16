@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110053",
+  "request_no": "SQ26100153",
+  "applicant": {
+    "name": "王子轩",
+    "employee_id": "E1003",
+    "grade": "P"
+  },
+  "category": "meal",
+  "city": "南京",
+  "start_date": "2026-10-15",
+  "end_date": "2026-10-15",
+  "purpose": "部门周例会工作餐",
+  "amount_fen": 36000,
+  "submit_date": "2026-10-25",
+  "internal_count": 4,
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

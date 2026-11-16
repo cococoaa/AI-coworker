@@ -1,0 +1,23 @@
+{
+  "claim_no": "BX26110031",
+  "request_no": "SQ26100131",
+  "applicant": {
+    "name": "周明辉",
+    "employee_id": "E2001",
+    "grade": "M"
+  },
+  "category": "meal",
+  "city": "苏州",
+  "start_date": "2026-10-05",
+  "end_date": "2026-10-05",
+  "purpose": "接待客户商务洽谈",
+  "amount_fen": 120000,
+  "submit_date": "2026-10-11",
+  "internal_count": 4,
+  "external_count": 3,
+  "external_org": "汇通物流集团有限公司",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110055",
+  "request_no": "SQ26100155",
+  "applicant": {
+    "name": "周明辉",
+    "employee_id": "E2001",
+    "grade": "M"
+  },
+  "category": "lodging",
+  "from_city": "上海",
+  "city": "深圳",
+  "start_date": "2026-10-28",
+  "end_date": "2026-10-30",
+  "purpose": "供应商现场评审",
+  "amount_fen": 180000,
+  "submit_date": "2026-11-04",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

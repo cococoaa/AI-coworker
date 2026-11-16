@@ -1,0 +1,45 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26353197124678061306",
+      "issue_date": "2026-10-07",
+      "total_fen": 120000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103RDY38Y3YCG",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310103RDY38Y3YCG",
+      "name": "青岛聚贤楼餐饮管理有限公司",
+      "city": "青岛",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC28N1",
+      "invoice_no": "26196387399204093436",
+      "applicant_id": "E1004",
+      "seller_tax_id": "9131010391YE0HYEA5",
+      "issue_date": "2026-08-24",
+      "amount_fen": 192701,
+      "category": "lodging",
+      "status": "rejected",
+      "submit_date": "2026-08-29"
+    },
+    {
+      "claim_no": "BHC28N2",
+      "invoice_no": "26197153873884183627",
+      "applicant_id": "E3002",
+      "seller_tax_id": "91310114YCF0X271BE",
+      "issue_date": "2026-09-07",
+      "amount_fen": 104950,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-12"
+    }
+  ],
+  "faults": null
+}

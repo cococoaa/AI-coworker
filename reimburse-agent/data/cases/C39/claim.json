@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110039",
+  "request_no": "SQ26100139",
+  "applicant": {
+    "name": "周明辉",
+    "employee_id": "E2001",
+    "grade": "M"
+  },
+  "category": "meal",
+  "city": "西安",
+  "start_date": "2026-10-05",
+  "end_date": "2026-10-05",
+  "purpose": "版本发布后团队聚餐",
+  "amount_fen": 56000,
+  "submit_date": "2026-10-15",
+  "internal_count": 4,
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

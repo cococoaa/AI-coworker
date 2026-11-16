@@ -1,0 +1,58 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26187761875451459114",
+      "issue_date": "2026-09-25",
+      "total_fen": 70000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101032N4TN8QPNL",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "913101032N4TN8QPNL",
+      "name": "天津安澜酒店管理有限公司",
+      "city": "天津",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC19K1",
+      "invoice_no": "26187761875451459114",
+      "applicant_id": "E1005",
+      "seller_tax_id": "913101032N4TN8QPNL",
+      "issue_date": "2026-09-25",
+      "amount_fen": 70000,
+      "category": "lodging",
+      "status": "rejected",
+      "submit_date": "2026-09-30"
+    },
+    {
+      "claim_no": "BHC19N1",
+      "invoice_no": "26169744222484581976",
+      "applicant_id": "E3001",
+      "seller_tax_id": "91310109JKP0C7RNL7",
+      "issue_date": "2026-08-20",
+      "amount_fen": 34247,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-08-25"
+    },
+    {
+      "claim_no": "BHC19N2",
+      "invoice_no": "26496121334216806331",
+      "applicant_id": "E1004",
+      "seller_tax_id": "91310108004EA1QNEG",
+      "issue_date": "2026-08-25",
+      "amount_fen": 92979,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-08-30"
+    }
+  ],
+  "faults": null
+}

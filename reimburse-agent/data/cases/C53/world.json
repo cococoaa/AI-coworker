@@ -1,0 +1,51 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26226848865404883141",
+      "issue_date": "2026-10-15",
+      "total_fen": 36000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101038BWKNWE1F0",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "913101038BWKNWE1F0",
+      "name": "金禾源餐饮服务有限公司",
+      "city": "南京",
+      "status": "注销"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC53N1",
+      "invoice_no": "26284730737449864282",
+      "applicant_id": "E3002",
+      "seller_tax_id": "91310116H04N5CL96L",
+      "issue_date": "2026-09-06",
+      "amount_fen": 41380,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-11"
+    },
+    {
+      "claim_no": "BHC53N2",
+      "invoice_no": "26442988774818122623",
+      "applicant_id": "E1001",
+      "seller_tax_id": "91310107P2XD8C330D",
+      "issue_date": "2026-09-25",
+      "amount_fen": 46589,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-30"
+    }
+  ],
+  "faults": [
+    {
+      "tool": "check_company",
+      "key": "913101038BWKNWE1F0",
+      "mode": "error"
+    }
+  ]
+}

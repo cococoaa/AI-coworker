@@ -1,0 +1,22 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26493829584311275712",
+      "issue_date": "2026-10-13",
+      "total_fen": 100000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310117D2ALLX8LFU",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310117D2ALLX8LFU",
+      "name": "武汉江南小馆餐饮管理有限公司",
+      "city": "武汉",
+      "status": "存续"
+    }
+  ],
+  "history": null,
+  "faults": null
+}

@@ -1,0 +1,251 @@
+// serve 启动单页审核界面。
+//
+//	go run ./cmd/serve
+//	go run ./cmd/serve -addr 127.0.0.1:8790 -mcp-url http://127.0.0.1:8791/mcp
+//	go run ./cmd/serve -addr 0.0.0.0:8790 -ui-token-file tokens.txt   跨机访问界面
+//
+// 界面本身只读业务数据、不做判定；判定全部在服务端的规则引擎里。
+package main
+
+import (
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+
+	"reimburse/internal/llm"
+	"reimburse/internal/mcpauth"
+	"reimburse/internal/server"
+	"reimburse/rules"
+)
+
+func main() {
+	addr := flag.String("addr", "127.0.0.1:8790", "监听地址；跨机访问用 0.0.0.0:8790 并配令牌")
+	data := flag.String("data", "data", "测试集根目录（含 cases/）")
+	cfgPath := flag.String("config", "", "模型配置文件，缺省用内置默认值")
+	rulesPath := flag.String("rules", "", "外部规则表，缺省用内嵌规则表")
+	mcpURL := flag.String("mcp-url", "", "连接独立 MCP 服务；为空则在进程内起 MCP 服务")
+	mcpData := flag.String("mcp-data", "", "进程内 MCP 服务的数据文件；为空则用当前单据的库")
+	uiToken := flag.String("ui-token-file", "", "界面访问令牌文件；监听非本机地址时必须提供")
+	replayDir := flag.String("replay", "data/replay", "录制回放目录：实时调用失败时用它兜底；不存在则忽略")
+	demo := flag.Bool("demo-synthetic", false, "无密钥演示模式：模型不可用时用合成抽取，界面会标明「合成」")
+	flag.Parse()
+
+	rf, err := loadRules(*rulesPath)
+	if err != nil {
+		log.Fatalf("读取规则表: %v", err)
+	}
+	cfg, err := llm.LoadConfig(*cfgPath)
+	if err != nil {
+		log.Fatalf("读取模型配置: %v", err)
+	}
+	srv, err := server.New(*data, rf, cfg)
+	if err != nil {
+		log.Fatalf("加载测试集: %v", err)
+	}
+	srv.MCPURL = *mcpURL
+	srv.MCPData = *mcpData
+	if st, err := os.Stat(*replayDir); err == nil && st.IsDir() {
+		srv.ReplayDir = *replayDir
+		log.Printf("回放目录 %s 已就绪：优先用真实录制，没有录制才用合成", *replayDir)
+	}
+	srv.DemoSynthetic = *demo
+	if *demo {
+		log.Printf("无密钥演示模式已开启：抽取结果为合成数据，不是模型真实输出，界面与报告都会标注")
+	}
+	if *mcpURL != "" {
+		tok, _, err := mcpauth.LoadClientToken(mcpauth.EnvClientToken, *uiToken)
+		if err != nil {
+			log.Fatalf("连接 MCP 服务需要令牌: %v", err)
+		}
+		srv.MCPToken = tok
+	}
+
+	handler := srv.Routes()
+	// 界面跨机访问：与 MCP 服务同一套令牌机制，避免"工具锁了、界面没锁"。
+	if !isLoopback(*addr) {
+		toks, src, err := mcpauth.LoadTokens(mcpauth.EnvUITokens, *uiToken)
+		if err != nil || len(toks) == 0 {
+			log.Fatalf("监听 %s 属于跨机访问，必须给界面配令牌：设置环境变量 %s 或用 -ui-token-file",
+				*addr, mcpauth.EnvUITokens)
+		}
+		v, err := mcpauth.NewVerifier(toks)
+		if err != nil {
+			log.Fatalf("界面令牌配置无效: %v", err)
+		}
+		log.Printf("界面鉴权已启用，令牌 %v（%s）", v.Names(), src)
+		handler = uiAuth(v, handler)
+	}
+
+	hs := &http.Server{Addr: *addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	go func() {
+		log.Printf("审核界面 http://%s ，测试集 %s，规则 %s，MCP %s", *addr, *data,
+			rf.Policy.Version, toolsMode(srv.MCPURL))
+		if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
+		}
+	}()
+	<-ctx.Done()
+	shut, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = hs.Shutdown(shut)
+}
+
+// uiAuth 在令牌中间件前面补一层"给浏览器用的登录页"。
+//
+// 纯 401 对现场太不友好：浏览器只会把 "no bearer token" 渲染成一行白底黑字，
+// 没人知道该干什么。这里让未携带令牌的页面请求返回一个只需要粘贴令牌的登录框，
+// 校验通过后种一个 HttpOnly Cookie，之后页面与 SSE 都自动带上。
+//
+// 安全上的取舍：
+//   - Cookie 是 HttpOnly + SameSite=Strict，前端脚本读不到；
+//   - 仍然支持 Authorization: Bearer，供脚本与 curl 使用；
+//   - 登录失败只回一句"令牌不正确"，不暴露令牌名或指纹。
+func uiAuth(v *mcpauth.Verifier, next http.Handler) http.Handler {
+	guarded := v.Middleware()(next)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/login" {
+			serveLogin(v, guarded, w, r)
+			return
+		}
+		if r.Header.Get("Authorization") == "" {
+			if c, err := r.Cookie(cookieName); err == nil && c.Value != "" {
+				r.Header.Set("Authorization", "Bearer "+c.Value)
+			}
+		}
+		// 浏览器打开页面但没带任何凭证：给登录页，而不是一行英文报错。
+		if r.URL.Path == "/" && r.Header.Get("Authorization") == "" && acceptsHTML(r) {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		guarded.ServeHTTP(w, r)
+	})
+}
+
+const cookieName = "reimburse_ui"
+
+func acceptsHTML(r *http.Request) bool {
+	return strings.Contains(r.Header.Get("Accept"), "text/html")
+}
+
+// serveLogin 处理登录页与登录提交。
+func serveLogin(v *mcpauth.Verifier, guarded http.Handler, w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		tok := strings.TrimSpace(r.FormValue("token"))
+		if tok == "" {
+			writeLoginPage(w, "请输入令牌", http.StatusOK)
+			return
+		}
+		// 复用同一套校验：能通过 MCP 中间件的令牌，就是能用的令牌。
+		probe := r.Clone(r.Context())
+		probe.Header = http.Header{}
+		probe.Header.Set("Authorization", "Bearer "+tok)
+		rec := &probeWriter{header: http.Header{}}
+		guarded.ServeHTTP(rec, probe)
+		if rec.status == http.StatusUnauthorized {
+			writeLoginPage(w, "令牌不正确", http.StatusOK)
+			return
+		}
+		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/",
+			HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: 12 * 3600})
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	writeLoginPage(w, "", http.StatusOK)
+}
+
+// probeWriter 用于内部试打一次请求，只关心状态码。
+type probeWriter struct {
+	header http.Header
+	status int
+}
+
+func (p *probeWriter) Header() http.Header { return p.header }
+func (p *probeWriter) Write(b []byte) (int, error) {
+	if p.status == 0 {
+		p.status = 200
+	}
+	return len(b), nil
+}
+func (p *probeWriter) WriteHeader(code int) {
+	if p.status == 0 {
+		p.status = code
+	}
+}
+
+func writeLoginPage(w http.ResponseWriter, msg string, code int) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(code)
+	tip := ""
+	if msg != "" {
+		tip = `<p class="err">` + msg + `</p>`
+	}
+	_, _ = w.Write([]byte(loginHTML(tip)))
+}
+
+func loginHTML(tip string) string {
+	return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>报销审核 · 登录</title>
+<style>
+body{margin:0;height:100vh;display:grid;place-items:center;background:#0f1115;color:#e6e9ef;
+font:14px/1.6 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+.card{width:340px;background:#171a21;border:1px solid #2a2f3a;border-radius:12px;padding:24px}
+h1{font-size:15px;margin:0 0 4px}p.sub{color:#6b7484;font-size:12px;margin:0 0 16px}
+input{width:100%;box-sizing:border-box;background:#1e222b;border:1px solid #2a2f3a;color:#e6e9ef;
+border-radius:8px;padding:9px 11px;font-size:13px;font-family:ui-monospace,Consolas,monospace}
+button{width:100%;margin-top:12px;background:#1f6feb;border:none;color:#fff;padding:9px;border-radius:8px;
+font-size:13px;font-weight:600;cursor:pointer}
+.err{color:#f85149;font-size:12px;margin:8px 0 0}
+.tip{color:#8b94a5;font-size:11.5px;margin-top:14px;line-height:1.7}
+</style></head><body><div class="card">
+<h1>报销审核 · AI 同事</h1>
+<p class="sub">本服务已开启访问控制，请粘贴访问令牌</p>
+<form method="post" action="/login">
+<input name="token" type="password" placeholder="粘贴访问令牌" autofocus autocomplete="off">
+<button type="submit">进入</button>
+</form>` + tip + `
+<p class="tip">令牌由管理员通过环境变量 REIMBURSE_UI_TOKENS 配置。<br>脚本与 curl 可直接用请求头 Authorization: Bearer &lt;令牌&gt;。</p>
+</div></body></html>`
+}
+
+func toolsMode(u string) string {
+	if u == "" {
+		return "进程内"
+	}
+	return "远程 " + u
+}
+
+func isLoopback(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		host = addr
+	}
+	switch strings.ToLower(host) {
+	case "", "0.0.0.0", "::", "[::]":
+		return false
+	case "localhost":
+		return true
+	}
+	ip := net.ParseIP(strings.Trim(host, "[]"))
+	return ip != nil && ip.IsLoopback()
+}
+
+func loadRules(p string) (*rules.File, error) {
+	if p == "" {
+		return rules.Load()
+	}
+	return rules.LoadFile(p)
+}
+
+var _ = fmt.Sprintf

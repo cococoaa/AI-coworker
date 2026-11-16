@@ -1,0 +1,23 @@
+{
+  "claim_no": "BX26110009",
+  "request_no": "SQ26100109",
+  "applicant": {
+    "name": "王子轩",
+    "employee_id": "E1003",
+    "grade": "P"
+  },
+  "category": "meal",
+  "city": "苏州",
+  "start_date": "2026-10-14",
+  "end_date": "2026-10-14",
+  "purpose": "接待合作方项目评审",
+  "amount_fen": 120000,
+  "submit_date": "2026-10-19",
+  "internal_count": 2,
+  "external_count": 2,
+  "external_org": "远景新能源有限公司",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

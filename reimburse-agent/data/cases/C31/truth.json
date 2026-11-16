@@ -1,0 +1,61 @@
+{
+  "id": "C31",
+  "title": "招待拆分：同日同店两笔，各自未到审批线，合计超线",
+  "tags": [
+    "meal",
+    "violation",
+    "split"
+  ],
+  "decision": "manual_review",
+  "hits": [
+    "R05-b"
+  ],
+  "approved_fen": 0,
+  "invoice": {
+    "invoice_no": "26110566608052002274",
+    "issue_date": "2026-10-05",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "苏州川味坊餐饮管理有限公司",
+    "seller_tax_id": "91310109FPL4FDQE9P",
+    "item_name": "*餐饮服务*餐费",
+    "tax_rate_pct": 6,
+    "ex_tax_fen": 113208,
+    "tax_fen": 6792,
+    "total_fen": 120000
+  },
+  "support": {
+    "kind": "consumption",
+    "date": "2026-10-05",
+    "city": "苏州",
+    "venue": "苏州川味坊",
+    "lines": [
+      {
+        "name": "蒜蓉粉丝虾",
+        "qty": 1,
+        "amount_fen": 8571
+      },
+      {
+        "name": "饮料",
+        "qty": 2,
+        "amount_fen": 42857
+      },
+      {
+        "name": "米饭",
+        "qty": 1,
+        "amount_fen": 17142
+      },
+      {
+        "name": "凉拌黄瓜",
+        "qty": 1,
+        "amount_fen": 34285
+      },
+      {
+        "name": "酸辣汤",
+        "qty": 1,
+        "amount_fen": 17145
+      }
+    ],
+    "total_fen": 120000
+  }
+}

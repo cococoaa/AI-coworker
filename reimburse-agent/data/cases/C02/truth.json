@@ -1,0 +1,49 @@
+{
+  "id": "C02",
+  "title": "普通员工乘飞机经济舱，材料齐全",
+  "tags": [
+    "transport",
+    "clean"
+  ],
+  "decision": "approve",
+  "hits": [],
+  "approved_fen": 128000,
+  "invoice": {
+    "invoice_no": "26219214728222550625",
+    "issue_date": "2026-09-21",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "云帆航空有限责任公司",
+    "seller_tax_id": "913101106FJ4NMP0UM",
+    "item_name": "*运输服务*航空旅客运输",
+    "tax_rate_pct": 9,
+    "ex_tax_fen": 117431,
+    "tax_fen": 10569,
+    "total_fen": 128000
+  },
+  "support": {
+    "kind": "itinerary",
+    "mode": "flight",
+    "person": "陈思远",
+    "date": "2026-09-21",
+    "vehicle": "YF7469",
+    "from": "上海",
+    "to": "广州",
+    "seat": "经济舱",
+    "lines": [
+      {
+        "name": "票价",
+        "amount_fen": 119000
+      },
+      {
+        "name": "燃油附加费",
+        "amount_fen": 4000
+      },
+      {
+        "name": "民航发展基金",
+        "amount_fen": 5000
+      }
+    ],
+    "total_fen": 128000
+  }
+}

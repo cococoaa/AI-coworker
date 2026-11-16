@@ -1,0 +1,23 @@
+{
+  "claim_no": "BX26110017",
+  "request_no": "SQ26100117",
+  "applicant": {
+    "name": "吴静怡",
+    "employee_id": "E2002",
+    "grade": "M"
+  },
+  "category": "meal",
+  "city": "成都",
+  "start_date": "2026-10-24",
+  "end_date": "2026-10-24",
+  "purpose": "接待供应商技术交流",
+  "amount_fen": 150000,
+  "submit_date": "2026-11-01",
+  "internal_count": 3,
+  "external_count": 3,
+  "external_org": "启明医疗科技有限公司",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

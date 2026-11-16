@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110033",
+  "request_no": "SQ26100133",
+  "applicant": {
+    "name": "陈思远",
+    "employee_id": "E1001",
+    "grade": "P"
+  },
+  "category": "lodging",
+  "from_city": "上海",
+  "city": "青岛",
+  "start_date": "2026-10-24",
+  "end_date": "2026-10-26",
+  "purpose": "培训与技术支持",
+  "amount_fen": 77000,
+  "submit_date": "2026-11-02",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}
