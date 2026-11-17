@@ -175,4 +175,7 @@ type Case struct {
 	SupportText string // 空表示缺失
 	Truth       Truth
 	World       World
+	// HasTruth 表示目录里带了 truth.json（标准答案）。
+	// 真实票据没有标准答案：Truth 会是零值，绝不能把零值当成"标准答案是空的"来用。
+	HasTruth bool
 }

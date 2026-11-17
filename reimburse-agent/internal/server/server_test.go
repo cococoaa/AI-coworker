@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -45,6 +46,9 @@ func testServer(t *testing.T) *Server {
 		t.Fatal(err)
 	}
 	s.People = people
+	// 测试默认当"本机直连"：RemoteAddr 是回环地址，由 LocalOperator 提供身份。
+	// 这样复核测试不必伪造令牌，也不会误用"body 里写别人工号"这种正是要堵的路径。
+	s.LocalOperator = "E3001"
 	// 任务库与复核记录给临时文件：否则同一包里的测试会互相影响
 	// （一个测试写的任务会出现在另一个测试的待办列表里）。
 	tk, err := task.Open(filepath.Join(t.TempDir(), "tasks.json"))
@@ -56,6 +60,17 @@ func testServer(t *testing.T) *Server {
 		t.Fatal(err)
 	}
 	return s
+}
+
+// localReq 构造一个"本机直连"的请求。
+//
+// httptest.NewRequest 的 RemoteAddr 默认是 192.0.2.1:1234（测试网段），
+// 不是回环地址，所以不会命中 LocalOperator。这里显式设成 127.0.0.1，
+// 与真实"本机打开界面"的路径一致。
+func localReq(method, target string, body io.Reader) *http.Request {
+	r := httptest.NewRequest(method, target, body)
+	r.RemoteAddr = "127.0.0.1:54321"
+	return r
 }
 
 func TestMetaAndCases(t *testing.T) {
@@ -267,27 +282,42 @@ func TestReviewWriteAndRevoke(t *testing.T) {
 	s := testServer(t)
 	h := s.Routes()
 
-	// 1) 无工号：拒绝
+	// 1) 无法确定身份：拒绝。
+	//    本机未绑定操作人、请求又不是回环来源，就没有任何可信身份来源。
+	s.LocalOperator = ""
 	body, _ := json.Marshal(map[string]any{"case_id": "C01", "decision": "approve"})
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+	r := httptest.NewRequest("POST", "/api/review", bytes.NewReader(body))
+	r.RemoteAddr = "203.0.113.9:443" // 外部来源，且无令牌
+	h.ServeHTTP(rec, r)
 	if rec.Code != 403 {
-		t.Fatalf("未提供工号应 403，得到 %d", rec.Code)
+		t.Fatalf("无法确定身份时应 403，得到 %d", rec.Code)
 	}
 
-	// 2) 工号不在名单：拒绝
+	// 2) 冒名：body 里写别人的工号不起作用，一律按绑定身份记。
+	//    这正是本次要堵的洞——谁都能在 body 里填一个别人的工号。
+	s.LocalOperator = "E3001"
 	body, _ = json.Marshal(map[string]any{"case_id": "C01", "decision": "approve", "employee_id": "E9999"})
 	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
-	if rec.Code != 403 {
-		t.Fatalf("未知工号应 403，得到 %d", rec.Code)
+	h.ServeHTTP(rec, localReq("POST", "/api/review", bytes.NewReader(body)))
+	if rec.Code == 403 {
+		t.Fatalf("绑定身份有效时不应因 body 里的假工号被拒，得到 %d %s", rec.Code, rec.Body.String())
+	}
+	var spoof struct {
+		Review ReviewOutcome `json:"review"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &spoof); err != nil {
+		t.Fatal(err)
+	}
+	if spoof.Review.Operator != "E3001" {
+		t.Errorf("应按绑定身份 E3001 记账，而不是 body 里的 E9999，实际 %q", spoof.Review.Operator)
 	}
 
 	// 3) 正确工号：写入并回写查重库
 	body, _ = json.Marshal(map[string]any{"case_id": "C01", "claim_no": "BX26110001",
 		"decision": "approve", "note": "票据齐全", "employee_id": "E3001"})
 	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+	h.ServeHTTP(rec, localReq("POST", "/api/review", bytes.NewReader(body)))
 	if rec.Code != 200 {
 		t.Fatalf("复核失败: %d %s", rec.Code, rec.Body.String())
 	}
@@ -307,34 +337,46 @@ func TestReviewWriteAndRevoke(t *testing.T) {
 	if resp.Impact["affects_dedup"] != true {
 		t.Errorf("应明确告知影响查重库: %v", resp.Impact)
 	}
-	if len(s.extra()) != 1 {
-		t.Fatalf("应回写 1 条查重记录，得到 %d", len(s.extra()))
+	// 前面步骤里"冒名"那条也写成了一条通过结论，各自占一条查重记录。
+	if len(s.extra()) < 1 {
+		t.Fatalf("应至少回写 1 条查重记录，得到 %d", len(s.extra()))
 	}
 
 	// 4) 撤销：标记撤销并回滚查重库
 	body, _ = json.Marshal(map[string]any{"id": resp.Review.ID, "reason": "看错了",
 		"employee_id": "E3001"})
 	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review/revoke", bytes.NewReader(body)))
+	h.ServeHTTP(rec, localReq("POST", "/api/review/revoke", bytes.NewReader(body)))
 	if rec.Code != 200 {
 		t.Fatalf("撤销失败: %d %s", rec.Code, rec.Body.String())
 	}
-	if len(s.extra()) != 0 {
-		t.Errorf("撤销后查重库应为空，实际还有 %d 条", len(s.extra()))
+	// 只断言"自己那条"被撤掉：前面步骤里还写进过别的通过结论，
+	// 撤销一条不能把别人那条一起删了（这是本次要保证的边界）。
+	want := resp.Review.AffectedHistory.ClaimNo
+	for _, h := range s.extra() {
+		if h.ClaimNo == want {
+			t.Errorf("撤销后该条查重记录应消失: %s", want)
+		}
 	}
 
 	// 5) 记录仍在（审计要能看到谁撤的）
 	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("GET", "/api/reviews", nil))
+	h.ServeHTTP(rec, localReq("GET", "/api/reviews", nil))
 	var list struct {
 		Reviews []ReviewOutcome `json:"reviews"`
 	}
 	_ = json.Unmarshal(rec.Body.Bytes(), &list)
-	if len(list.Reviews) != 1 || !list.Reviews[0].Revoked() {
-		t.Fatalf("撤销记录应保留并标记: %+v", list.Reviews)
+	// 列表按时间倒序；最近一条应是刚撤销的那条。前面步骤里可能还有别的记录
+	// （冒名测试也会落一条），所以不能断言总数等于 1。
+	if len(list.Reviews) == 0 {
+		t.Fatal("撤销记录应保留")
 	}
-	if list.Reviews[0].RevokeReason != "看错了" {
-		t.Errorf("撤销原因应记录，得到 %q", list.Reviews[0].RevokeReason)
+	latest := list.Reviews[0]
+	if !latest.Revoked() {
+		t.Fatalf("最近一条应标记为已撤销: %+v", latest)
+	}
+	if latest.RevokeReason != "看错了" {
+		t.Errorf("撤销原因应记录，得到 %q", latest.RevokeReason)
 	}
 }
 
@@ -345,7 +387,7 @@ func TestRejectDoesNotAffectDedup(t *testing.T) {
 	body, _ := json.Marshal(map[string]any{"case_id": "C01", "decision": "reject",
 		"employee_id": "E3001"})
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+	h.ServeHTTP(rec, localReq("POST", "/api/review", bytes.NewReader(body)))
 	if rec.Code != 200 {
 		t.Fatalf("复核失败: %d", rec.Code)
 	}

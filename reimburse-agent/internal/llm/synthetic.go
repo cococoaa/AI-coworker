@@ -113,6 +113,13 @@ func (s *SyntheticLLM) ExtractWith(ctx context.Context, provider string, src Sou
 	if s.Case == nil {
 		return nil, &SchemaIssue{Kind: ErrUnsupported, Detail: "没有绑定用例，无法合成"}
 	}
+	if !s.Case.HasTruth {
+		// 合成抽取的原理就是从标准答案回放字段。没有标准答案，合成只能编，
+		// 而编出来的字段会进判定、进查重——那比"跑不了"危险得多。
+		// 这里明确拒绝，由调用方给出"该单据没有标准答案，合成模式不可用"的提示。
+		return nil, &SchemaIssue{Kind: ErrUnsupported,
+			Detail: "该单据没有标准答案（truth.json），合成演示模式无法用于真实票据"}
+	}
 	return s.Synth.SyntheticExtract(ctx, provider, s.Case)
 }
 

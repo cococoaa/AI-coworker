@@ -48,6 +48,9 @@ type Session struct {
 	TaskID string
 	// OnFinish 在审核完成后回调，用于更新任务状态。
 	OnFinish func(*audit.Report)
+	// OnFail 在审核异常中断时回调，用于把任务从"审核中"放回可重试状态。
+	// 没有它，一次失败就会让任务永远卡在"审核中"，谁也再动不了。
+	OnFail func(string)
 
 	mu       sync.Mutex
 	events   []audit.Event
@@ -88,6 +91,13 @@ type Server struct {
 	ReplayDir string
 	// DemoSynthetic 为真时，连录制都没有就用合成抽取。只在无密钥演示时开启。
 	DemoSynthetic bool
+	// LocalOperator 是本机（未启用令牌）访问时绑定的工号。
+	//
+	// 为什么需要：监听 127.0.0.1 时不走令牌鉴权，请求上下文里没有身份，
+	// 复核就会被默认拒绝——本机自己演示都做不了。这里给一个明确的本机操作人，
+	// 而不是"没身份也放行"。跨机部署必须配令牌，本字段不生效。
+	// 空串表示本机也不绑定身份（此时本机复核同样被拒绝）。
+	LocalOperator string
 }
 
 // New 创建服务。
@@ -126,6 +136,11 @@ func (s *Server) Find(id string) (*schema.Case, bool) {
 // 与 Start 的区别只在于"起点"：Start 是全新单据，StartTask 带着上一轮的
 // 补件清单与续审计划，审完会更新任务状态（轮次 +1）。
 func (s *Server) StartTask(c *schema.Case, t *task.Task, opt audit.Options, explain string, disabled []string) *Session {
+	return s.StartTaskAs(c, t, opt, explain, disabled, "")
+}
+
+// StartTaskAs 是续审入口，额外指定配额调用方。
+func (s *Server) StartTaskAs(c *schema.Case, t *task.Task, opt audit.Options, explain string, disabled []string, quotaClient string) *Session {
 	// 续审前先把"上一轮查了什么、这轮要重查什么"告诉读者。
 	opt.Recheck = convertRecheck(t.NextRecheck)
 	opt.ResumeHint = fmt.Sprintf("第 %d 轮续审：材料已补齐（%d 份附件），复用已核验结果，只重查受影响的判定项",
@@ -142,19 +157,47 @@ func (s *Server) StartTask(c *schema.Case, t *task.Task, opt audit.Options, expl
 		opt.ResumeHint += "；以下补交项无法对应到单据字段，未采用：" + strings.Join(unknown, "、")
 	}
 
-	sess := s.Start(eff, opt, explain, disabled)
-	sess.TaskID = t.ID
-	// 审核完成后把结论落到任务状态上。
-	sess.OnFinish = func(rep *audit.Report) {
-		s.applyReportToTask(t.ID, rep, c)
-	}
-	return sess
+	// 参数在启动前就位：TaskID 与 OnFinish 一起传进去，不存在
+	// "goroutine 先跑完、回调还没挂上"的窗口。
+	return s.startWith(eff, opt, explain, disabled, SessionOpts{
+		TaskID:      t.ID,
+		QuotaClient: quotaClient,
+		OnFinish: func(rep *audit.Report) {
+			s.applyReportToTask(t.ID, rep, c)
+		},
+		OnFail: func(string) { s.releaseTask(t.ID) },
+	})
+}
+
+// SessionOpts 是一次审核启动前必须定好的全部外部参数。
+//
+// 为什么要把它们集中起来：之前 Start() 先起 goroutine，再让调用方设置
+// TaskID / OnFinish / QuotaClient。审核跑得快时 goroutine 已经 finish 了，
+// 那几个字段还是空的——任务状态不会更新（转人工后待办不消失）、
+// 成本也记不到人头上。这类竞争不会报错，只会偶尔少记一笔，最难查。
+// 现在要求：这些参数在启动之前必须齐备。
+type SessionOpts struct {
+	// TaskID 非空表示这次审核属于某个任务（续审或首次建任务）。
+	TaskID string
+	// OnFinish 在审核完成后调用，用于把结论落到任务状态上。
+	OnFinish func(*audit.Report)
+	// OnFail 在审核异常中断时调用，用于把任务从"审核中"放回可重试状态。
+	// 没有它，一次失败就会让任务永远卡在"审核中"，谁也再动不了。
+	OnFail func(string)
+	// QuotaClient 是配额分桶用的调用方标识。
+	QuotaClient string
 }
 
 // Start 启动一次审核，立即返回 session，事件通过 SSE 订阅。
 func (s *Server) Start(c *schema.Case, opt audit.Options, explain string, disabled []string) *Session {
+	return s.startWith(c, opt, explain, disabled, SessionOpts{})
+}
+
+// startWith 是唯一的启动入口：参数齐了才起 goroutine。
+func (s *Server) startWith(c *schema.Case, opt audit.Options, explain string, disabled []string, so SessionOpts) *Session {
 	sess := &Session{ID: fmt.Sprintf("S%d", time.Now().UnixNano()), CaseID: c.ID, Started: time.Now(),
-		done: make(chan struct{}), listeners: map[chan audit.Event]bool{}}
+		done: make(chan struct{}), listeners: map[chan audit.Event]bool{},
+		TaskID: so.TaskID, OnFinish: so.OnFinish, OnFail: so.OnFail, QuotaClient: so.QuotaClient}
 	s.mu.Lock()
 	s.sessions[sess.ID] = sess
 	s.mu.Unlock()
@@ -238,7 +281,11 @@ func (s *Session) markDone() {
 func (s *Session) fail(msg string) {
 	s.mu.Lock()
 	s.err = msg
+	onFail := s.OnFail
 	s.mu.Unlock()
+	if onFail != nil {
+		onFail(msg)
+	}
 	s.markDone()
 	s.broadcastClose()
 }
@@ -282,6 +329,29 @@ func (s *Session) subscribe() (chan audit.Event, func()) {
 	}
 }
 
+// OperatorOf 解析这次请求的操作人：跨机看令牌绑定，本机看 LocalOperator。
+// 返回空串表示无法确定身份，写入类操作必须拒绝。
+func (s *Server) OperatorOf(r *http.Request) string {
+	if id := BoundEmployeeID(r); id != "" {
+		return id
+	}
+	// 本机直连：RemoteAddr 就是回环地址，且本次请求没有令牌。
+	if isLoopbackAddr(r.RemoteAddr) {
+		return s.LocalOperator
+	}
+	return ""
+}
+
+// isLoopbackAddr 判断远端是否为回环地址。
+func isLoopbackAddr(addr string) bool {
+	host := addr
+	if i := strings.LastIndex(addr, ":"); i >= 0 {
+		host = addr[:i]
+	}
+	host = strings.Trim(host, "[]")
+	return host == "127.0.0.1" || host == "::1" || host == "localhost"
+}
+
 // OpenReviewStore 打开复核记录文件。path 为空表示只在内存（重启即失，仅测试用）。
 //
 // 线上必须落盘：复核结论会改变查重结果，重启后丢了，下一次同票就会被放行。
@@ -301,27 +371,45 @@ func (s *Server) AddReview(r ReviewOutcome, history *schema.HistRecord) (ReviewO
 	if !ok {
 		return ReviewOutcome{}, fmt.Errorf("用例不存在: %s", r.CaseID)
 	}
-	saved, dup := s.reviews.AddIdem(r)
+	// 只有"通过"类结论才写查重库：驳回的结论代表这张票不该报，
+	// 写进去反而会让它以后被判"已报销过"，语义是错的。
+	var put *stubHistory
+	if r.Decision == policy.Approve || r.Decision == policy.ApproveAdj {
+		// 没有发票号就写不了查重：那会是一条查不出任何东西的空记录。
+		// 真实票据在模型不可用时正是这种情况——此时应当明确拒绝，
+		// 而不是假装记下了。宁可让财务知道"这张票没进查重库"。
+		if history.InvoiceNo == "" {
+			return ReviewOutcome{}, fmt.Errorf("无法取得发票号码，本条通过结论不能写入查重库；请先完成审核（或配置模型）后重试")
+		}
+		h := *history
+		// 主键由 AddWithHistory 追加复核记录编号（见 review_store.go），
+		// 这里只给基数，保证"同一张单的每次通过各有一条查重记录"。
+		h.ClaimNo = c.Claim.ClaimNo + "-RV"
+		sh := stubHistory{
+			ClaimNo: h.ClaimNo, InvoiceNo: h.InvoiceNo, ApplicantID: h.ApplicantID,
+			SellerTaxID: h.SellerTaxID, IssueDate: h.IssueDate, AmountFen: h.AmountFen,
+			Category: h.Category, Status: h.Status, SubmitDate: h.SubmitDate,
+		}
+		put = &sh
+	}
+
+	// 记录与查重回写一次写完：分两次写，第二次失败会留下"记录在、查重没写"的半成功状态。
+	saved, dup, err := s.reviews.AddWithHistory(r, put)
+	if err != nil {
+		return ReviewOutcome{}, err
+	}
 	if dup {
 		// 重复提交：不新增记录，也不重复回写查重库。
 		// 但要把"这是重复提交"告诉调用方，避免界面显示成两次不同结论。
 		saved.Duplicate = true
 		return saved, nil
 	}
-
-	// 只有"通过"类结论才写查重库：驳回的结论代表这张票不该报，
-	// 写进去反而会让它以后被判"已报销过"，语义是错的。
-	if r.Decision == policy.Approve || r.Decision == policy.ApproveAdj {
-		h := *history
-		h.ClaimNo = c.Claim.ClaimNo + "-RV"
-		s.reviews.PutHistory(stubHistory{
-			ClaimNo: h.ClaimNo, InvoiceNo: h.InvoiceNo, ApplicantID: h.ApplicantID,
-			SellerTaxID: h.SellerTaxID, IssueDate: h.IssueDate, AmountFen: h.AmountFen,
-			Category: h.Category, Status: h.Status, SubmitDate: h.SubmitDate,
-		})
-		saved.AffectedHistory = HistoryRef{ClaimNo: h.ClaimNo, InvoiceNo: h.InvoiceNo, Applied: true}
-		// 把回写标记记回记录本身，撤销时按它回滚。
-		s.reviews.UpdateAffected(saved.ID, saved.AffectedHistory)
+	if put != nil {
+		saved.AffectedHistory = HistoryRef{ClaimNo: put.ClaimNo, InvoiceNo: put.InvoiceNo, Applied: true}
+		// 把回写标记记回记录本身，撤销时按它回滚（这一步失败不影响结论，只影响撤销路径）。
+		if err := s.reviews.UpdateAffectedErr(saved.ID, saved.AffectedHistory); err != nil {
+			return ReviewOutcome{}, err
+		}
 	}
 	return saved, nil
 }
@@ -335,9 +423,12 @@ func (s *Server) RevokeReview(id, by, byName, reason string) (ReviewOutcome, err
 	if already {
 		return rec, nil
 	}
-	// 回滚查重库。
+	// 回滚查重库。落盘失败要报出去：内存里已标记撤销、盘上还有查重记录，
+	// 那下一次同票仍会被判"报过"，而界面以为已经撤了。
 	if rec.AffectedHistory.Applied && rec.AffectedHistory.ClaimNo != "" {
-		s.reviews.DropHistory(rec.AffectedHistory.ClaimNo)
+		if _, err := s.reviews.DropHistory(rec.AffectedHistory.ClaimNo); err != nil {
+			return ReviewOutcome{}, err
+		}
 	}
 	return rec, nil
 }

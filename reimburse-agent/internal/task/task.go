@@ -245,7 +245,7 @@ type Task struct {
 
 // Outstanding 返回未解决的缺失项。
 func (t *Task) Outstanding() []MissingItem {
-	var out []MissingItem
+	out := make([]MissingItem, 0, len(t.Missing))
 	for _, m := range t.Missing {
 		if !m.Resolved {
 			out = append(out, m)
@@ -657,6 +657,68 @@ func (t *Task) AttachmentOf(kind string) (Attachment, bool) {
 		return Attachment{}, false
 	}
 	return *best, true
+}
+
+// BeginAudit 抢占任务，把它标成"审核中"。
+//
+// 为什么需要显式抢占：连续点两次"续审"，两次请求几乎同时到达，
+// 都读到"待审核"就都会启动一轮审核。虽然第二次跑完会覆盖第一次的结论，
+// 但事件流、成本、批次号都会重复记一遍——看起来像系统抽风。
+// 这里用状态本身做互斥：只有从可审核状态成功切到 Auditing 的那次才算抢到。
+func (s *Store) BeginAudit(id string) (*Task, error) {
+	return s.Update(id, func(t *Task) error {
+		switch t.State {
+		case Pending:
+			t.State = Auditing
+			t.Events = append(t.Events, Event{At: s.now(), Kind: "auditing", Detail: "开始审核"})
+			return nil
+		case Auditing:
+			return fmt.Errorf("该任务正在审核中，请等这一轮结束（任务 %s）", t.ID)
+		default:
+			return fmt.Errorf("当前状态「%s」不能开始审核", t.State.Label())
+		}
+	})
+}
+
+// ResolveManual 把"待人工复核"的任务按财务结论收口。
+//
+// 为什么必须做：审核转人工后，任务停在 NeedManual，卡在"财务复核"。
+// 财务点了通过，如果任务状态不动，待办列表里这张单永远挂着——
+// 财务会以为自己没点成功，再点一次。这是"复核结论没有回落到流程"的典型表现。
+//
+// 返回的错误用于区分"状态不允许"，由调用方决定是提示还是忽略。
+func (s *Store) ResolveManual(id, decision, by, note string) (*Task, error) {
+	return s.Update(id, func(t *Task) error {
+		if t.State != NeedManual {
+			// 不是转人工的单，复核结论照样记在复核库里，但不改任务状态。
+			// 这里返回错误让调用方知道"没落上"，而不是假装成功。
+			return fmt.Errorf("任务 %s 当前为 %s，不是待人工复核，未变更状态", t.ID, t.State.Label())
+		}
+		var next State
+		switch decision {
+		case "approve", "approve_with_adjustment":
+			next = Approved
+		case "reject":
+			next = Rejected
+		case "need_more_info":
+			next = NeedMore
+		default:
+			// manual_review 保持原状：财务只是留了个意见，还没定。
+			return nil
+		}
+		t.State = next
+		t.Missing = nil
+		t.NextRecheck = nil
+		// 最近结论跟着人定的走：否则会出现"状态=初审通过、结论=转人工复核"
+		// 这种自相矛盾的记录，界面上看的人会以为数据错了。
+		t.LastDecision = decision
+		detail := "财务复核：" + next.Label()
+		if note != "" {
+			detail += "（" + note + "）"
+		}
+		t.Events = append(t.Events, Event{At: s.now(), Kind: "reviewed", Detail: detail, By: by})
+		return nil
+	})
 }
 
 // Withdraw 撤销任务。

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"reimburse/internal/audit"
 	"reimburse/internal/schema"
@@ -31,7 +32,7 @@ const (
 
 // buildMissing 从判定结果生成补件清单。
 func buildMissing(in *audit.Input, res *audit.Result) []task.MissingItem {
-	var out []task.MissingItem
+	out := make([]task.MissingItem, 0, 4)
 	seen := map[string]bool{}
 
 	// 1) 字段层面：原件没有 / 看不清 / 不一致。
@@ -281,14 +282,43 @@ func (s *Server) applyReportToTask(taskID string, rep *audit.Report, c *schema.C
 	} else {
 		run.Trigger = "initial"
 	}
-	if len(rep.Result.Hits) == 0 && len(s.Tasks.List()) >= 0 {
-		// 首次还是续审由轮次决定，轮次在 ApplyDecision 里算。
-	}
 	_, err := s.Tasks.ApplyDecision(taskID, run, rep.Result.Decision, missing, recheck, "system")
 	if err != nil {
-		// 任务状态更新失败不影响审核结论本身，但要留下痕迹。
-		rep.Warnings = append(rep.Warnings, "任务状态更新失败："+err.Error())
+		// 任务状态没更新，待办就不会出现在列表里——"转人工后待办消失"就是这么来的。
+		// 不能只在报告里加一行警告（没人看得到），要写成醒目的失败事件，
+		// 并标记报告有未完成的状态同步，让界面能提示"结论已出，但任务未同步"。
+		msg := "任务状态更新失败（结论已出，但待办可能不同步）：" + err.Error()
+		rep.Warnings = append(rep.Warnings, msg)
+		rep.TaskSyncError = err.Error()
+		rep.Events = append(rep.Events, audit.Event{
+			Seq:    len(rep.Events) + 1,
+			Stage:  audit.StageDone,
+			Kind:   "fail",
+			Title:  "任务状态未同步",
+			Detail: msg,
+			Data:   map[string]any{"task_id": taskID, "error": err.Error()},
+		})
+		return
 	}
+	rep.TaskID = taskID
+}
+
+// releaseTask 把卡在"审核中"的任务放回待审核，让它可以重试。
+//
+// 一经抢占就必须有释放路径：审核中途失败（工具连不上、进程被杀）时，
+// 任务会停在 Auditing，界面上既不能续审也不能重新审核，只能手工改文件。
+func (s *Server) releaseTask(id string) {
+	if s.Tasks == nil {
+		return
+	}
+	_, _ = s.Tasks.Update(id, func(t *task.Task) error {
+		if t.State == task.Auditing {
+			t.State = task.Pending
+			t.Events = append(t.Events, task.Event{At: time.Now(), Kind: "audit_failed",
+				Detail: "审核异常中断，已放回待审核"})
+		}
+		return nil
+	})
 }
 
 // taskRunCount 返回任务已有的审核批次数。

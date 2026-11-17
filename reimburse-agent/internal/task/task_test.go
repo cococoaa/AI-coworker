@@ -245,3 +245,56 @@ func TestWaitingDays(t *testing.T) {
 		t.Error("三天后应为 3 天")
 	}
 }
+
+// 财务复核结论要回落到任务状态，且"最近结论"跟着改。
+//
+// 否则会出现"状态=初审通过、结论=转人工复核"这种自相矛盾的记录，
+// 看的人会以为数据错了；转人工的单也会永远挂在待办里。
+func TestResolveManualUpdatesStateAndDecision(t *testing.T) {
+	s := newStore(t)
+	tk, _ := s.Create("C16", "BX26110016", "E1001")
+	if _, err := s.ApplyDecision(tk.ID, Run{Decision: "manual_review"}, "manual_review", nil, nil, "system"); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := s.ResolveManual(tk.ID, "approve", "E3001", "财务确认")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.State != Approved {
+		t.Errorf("复核通过后应为初审通过，实际 %s", got.State)
+	}
+	if got.LastDecision != "approve" {
+		t.Errorf("最近结论应跟着改，实际 %q", got.LastDecision)
+	}
+	if got.State.WaitingOn() != "已结束" {
+		t.Errorf("通过后不应再卡在某处，实际 %q", got.State.WaitingOn())
+	}
+
+	// 驳回同理。
+	tk2, _ := s.Create("C17", "BX26110017", "E1001")
+	s.ApplyDecision(tk2.ID, Run{Decision: "manual_review"}, "manual_review", nil, nil, "system")
+	got2, err := s.ResolveManual(tk2.ID, "reject", "E3001", "票据不符")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got2.State != Rejected || got2.LastDecision != "reject" {
+		t.Errorf("驳回后状态与结论都应更新，实际 %s / %q", got2.State, got2.LastDecision)
+	}
+}
+
+// 不是待人工复核的单，复核结论不改任务状态，且要明确报错让调用方知道。
+func TestResolveManualRejectsWrongState(t *testing.T) {
+	s := newStore(t)
+	tk, _ := s.Create("C01", "BX26110001", "E1001")
+	s.ApplyDecision(tk.ID, Run{Decision: "need_more_info"}, "need_more_info",
+		[]MissingItem{{Key: "support", Label: "行程单", Kind: "missing_attachment"}}, nil, "system")
+
+	if _, err := s.ResolveManual(tk.ID, "approve", "E3001", ""); err == nil {
+		t.Fatal("待补材料的单不应被复核直接改成通过")
+	}
+	got, _ := s.Get(tk.ID)
+	if got.State != NeedMore {
+		t.Errorf("状态不应被改动，实际 %s", got.State.Label())
+	}
+}

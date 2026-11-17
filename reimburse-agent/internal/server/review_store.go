@@ -189,14 +189,25 @@ func (r ReviewOutcome) ComputeIdemKey() string {
 // AddIdem 追加一条复核结论；同一幂等键已存在（且未撤销）时返回已有记录。
 // 第二个返回值为真表示这次是重复提交、没有新增记录。
 func (s *reviewStore) AddIdem(r ReviewOutcome) (ReviewOutcome, bool) {
+	out, dup, err := s.AddIdemErr(r)
+	if err != nil {
+		// 兼容路径：调用方没处理错误时，这里也不能把半成功的记录留在内存里。
+		return out, dup
+	}
+	return out, dup
+}
+
+// AddIdemErr 是带错误返回的版本。落盘失败时回滚内存，不留下"内存有、盘上没有"的记录。
+func (s *reviewStore) AddIdemErr(r ReviewOutcome) (ReviewOutcome, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key := r.ComputeIdemKey()
 	for _, old := range s.records {
 		if old.IdemKey == key && !old.Revoked() {
-			return *old, true
+			return *old, true, nil
 		}
 	}
+	prevSeq := s.seq
 	s.seq++
 	r.ID = fmt.Sprintf("RV%04d", s.seq)
 	r.IdemKey = key
@@ -204,13 +215,96 @@ func (s *reviewStore) AddIdem(r ReviewOutcome) (ReviewOutcome, bool) {
 		r.At = s.now()
 	}
 	s.records = append(s.records, &r)
-	_ = s.saveLocked()
-	return r, false
+	if err := s.saveLocked(); err != nil {
+		// 回滚：序号与记录都退回去，磁盘和内存都不留半截。
+		s.seq = prevSeq
+		s.records = s.records[:len(s.records)-1]
+		return ReviewOutcome{}, false, fmt.Errorf("复核记录落盘失败，本次结论未生效: %w", err)
+	}
+	return r, false, nil
+}
+
+// AddWithHistory 在同一个临界区里写复核记录与查重回写，一次落盘。
+//
+// 为什么必须一起写：先写记录、再写查重，第二次失败会留下"记录在、查重没写"——
+// 界面显示已通过，但同一张票下次还能再报。反过来也一样。
+// 要么两条都进盘，要么都不进。
+func (s *reviewStore) AddWithHistory(r ReviewOutcome, put *stubHistory) (ReviewOutcome, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	key := r.ComputeIdemKey()
+	for _, old := range s.records {
+		if old.IdemKey == key && !old.Revoked() {
+			return *old, true, nil
+		}
+	}
+
+	prevSeq := s.seq
+	var prevExtra reviewHistory
+	var hadExtra bool
+	if put != nil {
+		prevExtra, hadExtra = s.extra[put.ClaimNo]
+	}
+
+	s.seq++
+	r.ID = fmt.Sprintf("RV%04d", s.seq)
+	r.IdemKey = key
+	if put != nil {
+		// 查重记录按复核记录编号命名：同一张单多次通过各留一条，
+		// 撤销其中一条只撤自己那条，不会把别人的一起删掉。
+		put.ClaimNo = put.ClaimNo + "#" + r.ID
+	}
+	if r.At.IsZero() {
+		r.At = s.now()
+		if put != nil {
+			put.SubmitDate = r.At.Format("2006-01-02")
+		}
+	}
+	s.records = append(s.records, &r)
+	if put != nil {
+		h := *put
+		s.extra[h.ClaimNo] = reviewHistory{Rec: &h}
+	}
+
+	if err := s.saveLocked(); err != nil {
+		// 整体回滚，内存里不留任何半截状态。
+		s.seq = prevSeq
+		s.records = s.records[:len(s.records)-1]
+		if put != nil {
+			if hadExtra {
+				s.extra[put.ClaimNo] = prevExtra
+			} else {
+				delete(s.extra, put.ClaimNo)
+			}
+		}
+		return ReviewOutcome{}, false, fmt.Errorf("复核结论落盘失败，本次操作未生效: %w", err)
+	}
+	return r, false, nil
+}
+
+// UpdateAffectedErr 记录一条结论对查重库的影响；落盘失败时还原。
+func (s *reviewStore) UpdateAffectedErr(id string, ref HistoryRef) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, r := range s.records {
+		if r.ID != id {
+			continue
+		}
+		old := r.AffectedHistory
+		r.AffectedHistory = ref
+		if err := s.saveLocked(); err != nil {
+			r.AffectedHistory = old
+			return fmt.Errorf("复核记录落盘失败: %w", err)
+		}
+		return nil
+	}
+	return nil
 }
 
 // Add 追加一条复核结论（不判重，保留给内部一次性写入）。
 func (s *reviewStore) Add(r ReviewOutcome) ReviewOutcome {
-	out, _ := s.AddIdem(r)
+	out, _, _ := s.AddIdemErr(r)
 	return out
 }
 
@@ -237,12 +331,17 @@ func (s *reviewStore) Revoke(id, by, byName, reason string) (ReviewOutcome, bool
 		if r.Revoked() {
 			return *r, true, nil
 		}
+		// 记住撤销前的状态，落盘失败时还原——否则内存显示"已撤销"、盘上还是"有效"。
+		oldAt, oldBy, oldByName, oldReason := r.RevokedAt, r.RevokedBy, r.RevokedByName, r.RevokeReason
 		t := s.now()
 		r.RevokedAt = &t
 		r.RevokedBy = by
 		r.RevokedByName = byName
 		r.RevokeReason = reason
-		_ = s.saveLocked()
+		if err := s.saveLocked(); err != nil {
+			r.RevokedAt, r.RevokedBy, r.RevokedByName, r.RevokeReason = oldAt, oldBy, oldByName, oldReason
+			return ReviewOutcome{}, false, fmt.Errorf("撤销落盘失败，本次撤销未生效: %w", err)
+		}
 		return *r, false, nil
 	}
 	return ReviewOutcome{}, false, fmt.Errorf("复核记录不存在: %s", id)
@@ -275,7 +374,7 @@ func (s *reviewStore) List() []ReviewOutcome {
 func (s *reviewStore) Active() []ReviewOutcome {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	var out []ReviewOutcome
+	out := make([]ReviewOutcome, 0, len(s.records))
 	for _, r := range s.records {
 		if !r.Revoked() {
 			out = append(out, *r)
@@ -287,23 +386,37 @@ func (s *reviewStore) Active() []ReviewOutcome {
 // ---- 查重库回写 ----
 
 // PutHistory 写入一条回写记录。已存在则覆盖（同一张单多次复核，以最后一次为准）。
-func (s *reviewStore) PutHistory(h stubHistory) {
+// 落盘失败时还原旧值并返回错误：查重库决定了"这张票能不能再报"，不能只改内存。
+func (s *reviewStore) PutHistory(h stubHistory) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	old, had := s.extra[h.ClaimNo]
 	s.extra[h.ClaimNo] = reviewHistory{Rec: &h}
-	_ = s.saveLocked()
+	if err := s.saveLocked(); err != nil {
+		if had {
+			s.extra[h.ClaimNo] = old
+		} else {
+			delete(s.extra, h.ClaimNo)
+		}
+		return fmt.Errorf("查重回写落盘失败: %w", err)
+	}
+	return nil
 }
 
-// DropHistory 撤掉一条回写记录。
-func (s *reviewStore) DropHistory(claimNo string) bool {
+// DropHistory 撤掉一条回写记录。落盘失败时还原。
+func (s *reviewStore) DropHistory(claimNo string) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, ok := s.extra[claimNo]; !ok {
-		return false
+	old, ok := s.extra[claimNo]
+	if !ok {
+		return false, nil
 	}
 	delete(s.extra, claimNo)
-	_ = s.saveLocked()
-	return true
+	if err := s.saveLocked(); err != nil {
+		s.extra[claimNo] = old
+		return false, fmt.Errorf("撤回查重记录落盘失败: %w", err)
+	}
+	return true, nil
 }
 
 // Histories 返回全部回写记录，按 claim_no 排序（稳定输出）。

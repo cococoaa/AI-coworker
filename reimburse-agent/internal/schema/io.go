@@ -70,11 +70,19 @@ func LoadCase(dir string) (*Case, error) {
 		}
 		c.SupportText = string(b)
 	}
-	if err := readJSON(filepath.Join(dir, "truth.json"), &c.Truth); err != nil {
-		return nil, fmt.Errorf("%s truth.json: %w", c.ID, err)
+	// 真实票据没有标准答案：truth.json 允许缺失，此时 HasTruth 为假。
+	// 不能把"文件不在"当成"标准答案是空的"——那会让下游以为"答案就是全空"。
+	if _, statErr := os.Stat(filepath.Join(dir, "truth.json")); statErr == nil {
+		if err := readJSON(filepath.Join(dir, "truth.json"), &c.Truth); err != nil {
+			return nil, fmt.Errorf("%s truth.json: %w", c.ID, err)
+		}
+		c.HasTruth = true
 	}
-	if err := readJSON(filepath.Join(dir, "world.json"), &c.World); err != nil {
-		return nil, fmt.Errorf("%s world.json: %w", c.ID, err)
+	// world.json 是核验工具的后端数据；缺失时用空世界（工具会返回"查无"）。
+	if _, statErr := os.Stat(filepath.Join(dir, "world.json")); statErr == nil {
+		if err := readJSON(filepath.Join(dir, "world.json"), &c.World); err != nil {
+			return nil, fmt.Errorf("%s world.json: %w", c.ID, err)
+		}
 	}
 	return c, nil
 }

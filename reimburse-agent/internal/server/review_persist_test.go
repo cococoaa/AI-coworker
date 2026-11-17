@@ -21,7 +21,7 @@ func TestReviewPersistsAcrossRestart(t *testing.T) {
 	body, _ := json.Marshal(map[string]any{"case_id": "C01", "claim_no": "BX26110001",
 		"decision": "approve", "note": "票据齐全", "employee_id": "E3001"})
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+	h.ServeHTTP(rec, localReq("POST", "/api/review", bytes.NewReader(body)))
 	if rec.Code != 200 {
 		t.Fatalf("复核失败: %d %s", rec.Code, rec.Body.String())
 	}
@@ -47,7 +47,7 @@ func TestReviewPersistsAcrossRestart(t *testing.T) {
 	}
 	body, _ = json.Marshal(map[string]any{"case_id": "C02", "decision": "approve", "employee_id": "E3001"})
 	rec = httptest.NewRecorder()
-	s2.Routes().ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+	s2.Routes().ServeHTTP(rec, localReq("POST", "/api/review", bytes.NewReader(body)))
 	var resp struct {
 		Review ReviewOutcome `json:"review"`
 	}
@@ -69,7 +69,7 @@ func TestRevokedReviewPersists(t *testing.T) {
 	h := s.Routes()
 	body, _ := json.Marshal(map[string]any{"case_id": "C01", "decision": "approve", "employee_id": "E3001"})
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+	h.ServeHTTP(rec, localReq("POST", "/api/review", bytes.NewReader(body)))
 	var resp struct {
 		Review ReviewOutcome `json:"review"`
 	}
@@ -77,7 +77,7 @@ func TestRevokedReviewPersists(t *testing.T) {
 
 	body, _ = json.Marshal(map[string]any{"id": resp.Review.ID, "reason": "重复报销", "employee_id": "E3001"})
 	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review/revoke", bytes.NewReader(body)))
+	h.ServeHTTP(rec, localReq("POST", "/api/review/revoke", bytes.NewReader(body)))
 	if rec.Code != 200 {
 		t.Fatalf("撤销失败: %d", rec.Code)
 	}
@@ -112,7 +112,7 @@ func TestReviewIsIdempotent(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		body, _ := json.Marshal(payload)
 		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+		h.ServeHTTP(rec, localReq("POST", "/api/review", bytes.NewReader(body)))
 		if rec.Code != 200 {
 			t.Fatalf("第 %d 次提交失败: %d %s", i+1, rec.Code, rec.Body.String())
 		}
@@ -147,7 +147,7 @@ func TestReviewIsIdempotent(t *testing.T) {
 		"decision": "approve", "note": "改为按票面金额", "employee_id": "E3001"}
 	body, _ := json.Marshal(payload2)
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+	h.ServeHTTP(rec, localReq("POST", "/api/review", bytes.NewReader(body)))
 	var resp struct {
 		Review    ReviewOutcome `json:"review"`
 		Duplicate bool          `json:"duplicate"`
@@ -169,7 +169,7 @@ func TestRevokedThenResubmitSame(t *testing.T) {
 
 	body, _ := json.Marshal(payload)
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+	h.ServeHTTP(rec, localReq("POST", "/api/review", bytes.NewReader(body)))
 	var r1 struct {
 		Review ReviewOutcome `json:"review"`
 	}
@@ -177,11 +177,11 @@ func TestRevokedThenResubmitSame(t *testing.T) {
 
 	body, _ = json.Marshal(map[string]any{"id": r1.Review.ID, "reason": "撤错", "employee_id": "E3001"})
 	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review/revoke", bytes.NewReader(body)))
+	h.ServeHTTP(rec, localReq("POST", "/api/review/revoke", bytes.NewReader(body)))
 
 	body, _ = json.Marshal(payload)
 	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+	h.ServeHTTP(rec, localReq("POST", "/api/review", bytes.NewReader(body)))
 	var r2 struct {
 		Review    ReviewOutcome `json:"review"`
 		Duplicate bool          `json:"duplicate"`

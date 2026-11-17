@@ -1,0 +1,21 @@
+{
+ "claim_no": "BX26119999",
+ "request_no": "SQ20261117001",
+ "applicant": {
+  "name": "张伟",
+  "employee_id": "E1001",
+  "grade": "P"
+ },
+ "category": "transport",
+ "from_city": "上海",
+ "city": "杭州",
+ "start_date": "2026-11-10",
+ "end_date": "2026-11-11",
+ "purpose": "客户现场支持",
+ "amount_fen": 7300,
+ "submit_date": "2026-11-15",
+ "attachments": {
+  "invoice_file": "invoice.txt",
+  "support_file": "support.txt"
+ }
+}

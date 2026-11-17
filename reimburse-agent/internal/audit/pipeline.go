@@ -146,6 +146,11 @@ type Report struct {
 	Warnings []string `json:"warnings"`
 	// Trace 是逐字段溯源：每个值在原件里出自哪一句，找不到的单独标出。
 	Trace []FieldTrace `json:"field_trace,omitempty"`
+	// TaskID 是本次审核关联的任务号（有任务库时）。
+	TaskID string `json:"task_id,omitempty"`
+	// TaskSyncError 非空表示结论已出，但任务状态没同步成功。
+	// 界面必须据此提示"待办可能不同步"，不能让财务以为流程已经推进。
+	TaskSyncError string `json:"task_sync_error,omitempty"`
 }
 
 // Options 控制一次审核的行为。

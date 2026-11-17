@@ -1,15 +1,18 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
 	"reimburse/internal/audit"
+	"reimburse/internal/llm"
 	"reimburse/internal/mcpauth"
 	"reimburse/internal/schema"
 	"reimburse/internal/task"
@@ -44,7 +47,20 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/api/people", s.handlePeople)
 	mux.HandleFunc("/api/meta", s.handleMeta)
 	mux.HandleFunc("/api/stats", s.handleStats)
-	return logRequests(mux)
+	return logRequests(s.withOperator(mux))
+}
+
+// withOperator 把"本机操作人"注进请求上下文。
+//
+// 只在本机回环访问、且请求没带令牌时生效——这时走的是"本机直连"，
+// 没有经过令牌鉴权，上下文里本来没有身份。跨机访问仍以令牌绑定为准。
+func (s *Server) withOperator(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.LocalOperator != "" && BoundEmployeeID(r) == "" && isLoopbackAddr(r.RemoteAddr) {
+			r = r.WithContext(context.WithValue(r.Context(), localOpKey{}, s.LocalOperator))
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // logRequests 记录每个请求，便于现场排查"点了没反应"。
@@ -171,12 +187,12 @@ func (s *Server) handleAudit(w http.ResponseWriter, r *http.Request) {
 			taskID = tk.ID
 		}
 	}
-	sess := s.Start(c, opt, req.Explain, req.Disabled)
-	sess.QuotaClient = quotaClient(r)
+	// 参数在启动前全部就位，避免审核太快导致任务状态或成本漏记。
+	so := SessionOpts{TaskID: taskID, QuotaClient: quotaClient(r)}
 	if taskID != "" {
-		sess.TaskID = taskID
-		sess.OnFinish = func(rep *audit.Report) { s.applyReportToTask(taskID, rep, c) }
+		so.OnFinish = func(rep *audit.Report) { s.applyReportToTask(taskID, rep, c) }
 	}
+	sess := s.startWith(c, opt, req.Explain, req.Disabled, so)
 	out := map[string]any{"session_id": sess.ID, "case_id": c.ID, "started": sess.Started}
 	if taskID != "" {
 		out["task_id"] = taskID
@@ -286,15 +302,55 @@ type reviewRequest struct {
 	EmployeeID string `json:"employee_id"`
 	// DecisionBefore 是提交时的系统自动判定，用于对比"人是否改了结论"。
 	DecisionBefore string `json:"decision_before"`
+	// SessionID 是这次复核对应的审核会话。带上它，查重记录就能用
+	// 本次真实抽出的发票号，而不是只靠标准答案（真实票据没有标准答案）。
+	SessionID string `json:"session_id"`
 }
 
-// identify 从请求里取工号：优先 body，其次请求头。
-// 令牌只证明"这个部署允许访问"，工号才是身份。
+// identify 取当前操作人的工号。
+//
+// 工号只能来自令牌绑定（令牌名即工号，一令牌一人）。
+// 请求体里的 employee_id、请求头 X-Employee-ID 一律不再采信——
+// 谁都能在 body 里写一个别人的工号，那样"复核可追溯到人"就是一句空话。
+//
+// 本机未启用鉴权（没有令牌）时返回空串，调用方据此拒绝写入（默认拒绝）。
+// bodyID 参数保留只为兼容调用点，不再参与判断。
 func identify(bodyID string, r *http.Request) string {
-	if bodyID != "" {
-		return bodyID
+	_ = bodyID // 明确忽略：不接受调用方自报身份
+	return operatorOfRequest(r)
+}
+
+// operatorOfRequest 从请求上下文里取操作人。
+// 经 Server 的路由时用 Server.OperatorOf（含本机绑定）；否则只认令牌绑定。
+func operatorOfRequest(r *http.Request) string {
+	if id := BoundEmployeeID(r); id != "" {
+		return id
 	}
-	return r.Header.Get("X-Employee-ID")
+	if v := r.Context().Value(localOpKey{}); v != nil {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+// localOpKey 用于把本机操作人注入请求上下文。
+type localOpKey struct{}
+
+// BoundEmployeeID 返回令牌绑定的工号。
+// 没有令牌（本机未启用鉴权）或令牌未绑定时返回空串。
+func BoundEmployeeID(r *http.Request) string {
+	ti := mcpauth.TokenInfoFrom(r.Context())
+	if ti == nil {
+		return ""
+	}
+	// UserID 就是令牌名；按约定令牌名直接用工号（如 E3001）。
+	// 兼容 "E3001:王会计" 这种写法，只取冒号前。
+	id := strings.TrimSpace(ti.UserID)
+	if k := strings.Index(id, ":"); k > 0 {
+		id = strings.TrimSpace(id[:k])
+	}
+	return id
 }
 
 func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
@@ -340,25 +396,142 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 	if req.Decision == policy.Approve || req.Decision == policy.ApproveAdj {
 		status = schema.HistApproved
 	}
+	// 查重记录的发票信息：优先用本次审核真正抽出来的字段，没有才回落到标准答案。
+	//
+	// 真实票据没有 truth.json。如果这里只读 Truth，发票号会是空串，
+	// 查重记录就成了一条没有主键的空壳——"这张票报过"根本查不出来，
+	// 重复报销照样能过。宁可这条记录字段少一点，也不能是空的。
+	inv := histFieldsFromReport(req.SessionID, req.CaseID, s)
 	hist := &schema.HistRecord{
-		InvoiceNo: c.Truth.Invoice.InvoiceNo, ApplicantID: c.Claim.Applicant.EmployeeID,
-		SellerTaxID: c.Truth.Invoice.SellerTaxID, IssueDate: c.Truth.Invoice.IssueDate,
-		AmountFen: c.Truth.Invoice.TotalFen, Category: c.Claim.Category,
+		InvoiceNo: inv.InvoiceNo, ApplicantID: c.Claim.Applicant.EmployeeID,
+		SellerTaxID: inv.SellerTaxID, IssueDate: inv.IssueDate,
+		AmountFen: inv.AmountFen, Category: c.Claim.Category,
 		Status: status, SubmitDate: c.Claim.SubmitDate,
+	}
+	if hist.InvoiceNo == "" && c.HasTruth {
+		hist.InvoiceNo = c.Truth.Invoice.InvoiceNo
+		hist.SellerTaxID = c.Truth.Invoice.SellerTaxID
+		hist.IssueDate = c.Truth.Invoice.IssueDate
+		hist.AmountFen = c.Truth.Invoice.TotalFen
 	}
 	saved, err := s.AddReview(rv, hist)
 	if err != nil {
-		jsonOut(w, map[string]any{"error": err.Error()}, 400)
+		// 落盘失败要给 5xx：这不是用户输错，是服务没存下来。
+		// 返回 400 会让人以为"改个参数就能重试"，实际要修的是磁盘。
+		code := 400
+		if isPersistErr(err) {
+			code = 503
+		}
+		jsonOut(w, map[string]any{"ok": false, "error": err.Error(),
+			"note": "本条结论未生效，可原样重试"}, code)
 		return
 	}
-	// 幂等命中时同样返回 200，另带 duplicate 标记：前端不必写额外分支。
-	jsonOut(w, map[string]any{
+	// 复核结论必须回落到流程上：否则转人工的单永远挂在待办里，
+	// 财务会以为没点成功，再点一次。
+	out := map[string]any{
 		"ok":        true,
 		"review":    saved,
 		"duplicate": saved.Duplicate,
 		// 明确告诉前端这条结论对查重库做了什么。
 		"impact": impactOf(saved),
-	}, 200)
+	}
+	if s.Tasks != nil {
+		if tk, ok := s.Tasks.FindByCase(req.CaseID); ok {
+			if updated, terr := s.Tasks.ResolveManual(tk.ID, req.Decision, person.EmployeeID, req.Note); terr == nil {
+				out["task"] = updated
+				out["task_state"] = updated.State
+				out["waiting_on"] = updated.State.WaitingOn()
+			} else {
+				// 不是待人工复核的单：结论已记录，只是没改任务状态。如实告知。
+				out["task_state"] = tk.State
+				out["task_note"] = terr.Error()
+			}
+		}
+	}
+	jsonOut(w, out, 200)
+}
+
+// invFields 是查重需要的发票字段。
+type invFields struct {
+	InvoiceNo   string
+	SellerTaxID string
+	IssueDate   string
+	AmountFen   int64
+}
+
+// histFieldsFromReport 从最近一次审核的抽取结果里取发票字段。
+// 找不到会话（例如只做了复核没跑审核）时返回零值，由调用方决定回落策略。
+func histFieldsFromReport(sessionID, caseID string, s *Server) invFields {
+	var rep *audit.Report
+	if sessionID != "" {
+		s.mu.Lock()
+		sess := s.sessions[sessionID]
+		s.mu.Unlock()
+		if sess != nil {
+			if _, r, _, _ := sess.Snapshot(); r != nil {
+				rep = r
+			}
+		}
+	}
+	if rep == nil {
+		// 没带会话：取这张单最近一次审核的报告。
+		if sess := s.latestSessionFor(caseID); sess != nil {
+			if _, r, _, _ := sess.Snapshot(); r != nil {
+				rep = r
+			}
+		}
+	}
+	if rep == nil || rep.Extract == nil {
+		return invFields{}
+	}
+	get := func(name string) string {
+		if f, ok := rep.Extract.Fields[name]; ok {
+			return f.Value
+		}
+		return ""
+	}
+	out := invFields{
+		InvoiceNo:   get(llm.FInvoiceNo),
+		SellerTaxID: get(llm.FSellerTaxID),
+		IssueDate:   get(llm.FIssueDate),
+	}
+	// 金额从"元"转"分"：抽取层统一用元、两位小数字符串。
+	if v := get(llm.FTotalAmount); v != "" {
+		if f, err := strconv.ParseFloat(strings.TrimSpace(v), 64); err == nil {
+			out.AmountFen = int64(f*100 + 0.5)
+		}
+	}
+	return out
+}
+
+// latestSessionFor 找某张单据最近一次审核会话。
+func (s *Server) latestSessionFor(caseID string) *Session {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var best *Session
+	for _, sess := range s.sessions {
+		if sess.CaseID != caseID {
+			continue
+		}
+		if best == nil || sess.Started.After(best.Started) {
+			best = sess
+		}
+	}
+	return best
+}
+
+// isPersistErr 判断错误是否来自落盘失败（需要 5xx，而不是 4xx）。
+func isPersistErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	for _, kw := range []string{"落盘失败", "落盘", "写入", "permission denied", "no space"} {
+		if strings.Contains(msg, kw) {
+			return true
+		}
+	}
+	return false
 }
 
 // quotaClient 返回调用方标识，用于配额分桶。
@@ -368,11 +541,8 @@ func quotaClient(r *http.Request) string {
 	if ti := mcpauth.TokenInfoFrom(r.Context()); ti != nil && ti.UserID != "" {
 		return ti.UserID
 	}
-	// 本机未启用鉴权时没有令牌信息；退到工号请求头，再退到 "local"。
-	// 不假装知道是谁，但要给一个能对上人的标识。
-	if id := r.Header.Get("X-Employee-ID"); id != "" {
-		return id
-	}
+	// 本机未启用鉴权时没有令牌信息：记 "local"，不采信请求头里的自报工号。
+	// 配额分桶可以粗，但不能假装知道是谁——那是审计的事，审计不接受自报。
 	return "local"
 }
 
@@ -430,7 +600,11 @@ func (s *Server) handleRevoke(w http.ResponseWriter, r *http.Request) {
 	}
 	rec, err := s.RevokeReview(req.ID, person.EmployeeID, person.Name, reason)
 	if err != nil {
-		jsonOut(w, map[string]any{"error": err.Error()}, 404)
+		code := 404
+		if isPersistErr(err) {
+			code = 503
+		}
+		jsonOut(w, map[string]any{"ok": false, "error": err.Error()}, code)
 		return
 	}
 	jsonOut(w, map[string]any{
@@ -462,7 +636,8 @@ func (s *Server) handleTasks(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 	waitingOnly := r.URL.Query().Get("waiting") == "1"
 
-	var out []map[string]any
+	// 初始化为空切片：nil 会序列化成 null，界面上 `tasks.map` 直接抛异常。
+	out := make([]map[string]any, 0, len(all))
 	now := time.Now()
 	for _, t := range all {
 		if state != "" && string(t.State) != state {
@@ -599,6 +774,12 @@ func (s *Server) handleReaudit(w http.ResponseWriter, r *http.Request, id string
 		}, 400)
 		return
 	}
+	// 抢占任务：连续点两次续审时，只有第一次能切开这个状态。
+	// 放在建会话之前——先抢再跑，否则两次请求都会读到"待审核"。
+	if _, err := s.Tasks.BeginAudit(t.ID); err != nil {
+		jsonOut(w, map[string]any{"error": err.Error(), "task_id": t.ID}, 409)
+		return
+	}
 	c, ok := s.Find(t.CaseID)
 	if !ok {
 		jsonOut(w, map[string]any{"error": "关联单据不存在: " + t.CaseID}, 404)
@@ -615,8 +796,7 @@ func (s *Server) handleReaudit(w http.ResponseWriter, r *http.Request, id string
 			return
 		}
 	}
-	sess := s.StartTask(c, t, audit.Options{Injected: map[string]audit.Status{}}, "", nil)
-	sess.QuotaClient = quotaClient(r)
+	sess := s.StartTaskAs(c, t, audit.Options{Injected: map[string]audit.Status{}}, "", nil, quotaClient(r))
 	jsonOut(w, map[string]any{
 		"session_id": sess.ID, "task_id": t.ID, "round": len(t.Runs) + 1,
 		"recheck": t.NextRecheck,
@@ -691,7 +871,7 @@ func (s *Server) handlePeople(w http.ResponseWriter, r *http.Request) {
 		CanReview  bool   `json:"can_review"`
 		CanAudit   bool   `json:"can_audit"`
 	}
-	var out []brief
+	out := make([]brief, 0, 8)
 	for _, p := range s.People.All() {
 		if p.Disabled {
 			continue

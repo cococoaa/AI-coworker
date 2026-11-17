@@ -178,7 +178,7 @@ func TestTaskListShowsWaiting(t *testing.T) {
 	s.Tasks.ApplyDecision(b.ID, task.Run{Decision: "manual_review"}, "manual_review", nil, nil, "E3001")
 
 	rec := httptest.NewRecorder()
-	s.Routes().ServeHTTP(rec, httptest.NewRequest("GET", "/api/tasks?waiting=1", nil))
+	s.Routes().ServeHTTP(rec, localReq("GET", "/api/tasks?waiting=1", nil))
 	var d struct {
 		Tasks []map[string]any `json:"tasks"`
 		Stats map[string]int   `json:"stats"`
@@ -196,7 +196,7 @@ func TestTaskListShowsWaiting(t *testing.T) {
 	}
 	// 按状态筛
 	rec = httptest.NewRecorder()
-	s.Routes().ServeHTTP(rec, httptest.NewRequest("GET", "/api/tasks?state=need_manual", nil))
+	s.Routes().ServeHTTP(rec, localReq("GET", "/api/tasks?state=need_manual", nil))
 	_ = json.Unmarshal(rec.Body.Bytes(), &d)
 	if len(d.Tasks) != 1 {
 		t.Errorf("按 need_manual 筛应只有 1 张，得到 %d", len(d.Tasks))

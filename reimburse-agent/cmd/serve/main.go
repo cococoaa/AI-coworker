@@ -39,6 +39,7 @@ func main() {
 	mcpData := flag.String("mcp-data", "", "进程内 MCP 服务的数据文件；为空则用当前单据的库")
 	uiToken := flag.String("ui-token-file", "", "界面访问令牌文件；监听非本机地址时必须提供")
 	replayDir := flag.String("replay", "data/replay", "录制回放目录：实时调用失败时用它兜底；不存在则忽略")
+	localOp := flag.String("local-operator", "", "本机（127.0.0.1，无令牌）访问时绑定的工号；须在人员名单里。留空则本机复核也被拒绝")
 	peoplePath := flag.String("people", "people.json", "人员名单（工号 + 姓名 + 权限）。缺省文件不存在时：拒绝一切复核写入")
 	quotaPath := flag.String("quota-file", "data/quota.json", "用量配额文件（落盘，跨重启保留）")
 	weeklyBudget := flag.Float64("weekly-budget", 50, "周预算（美元）。0 表示不限制")
@@ -119,6 +120,18 @@ func main() {
 	}
 	srv.DemoSynthetic = *demo
 	if *demo {
+		// 合成模式靠标准答案回放字段。没有标准答案的单据跑不了，
+		// 与其等现场点开才发现，不如启动时就报清楚是哪几条。
+		var noTruth []string
+		for _, c := range srv.Cases {
+			if !c.HasTruth {
+				noTruth = append(noTruth, c.ID)
+			}
+		}
+		if len(noTruth) > 0 {
+			log.Fatalf("以下单据没有 truth.json，无法用于合成演示模式：%v\n"+
+				"合成模式只能跑带标准答案的测试集；要审真实票据请去掉 -demo-synthetic 并配置模型密钥", noTruth)
+		}
 		log.Printf("无密钥演示模式已开启：抽取结果为合成数据，不是模型真实输出，界面与报告都会标注")
 	}
 	if *mcpURL != "" {
@@ -127,6 +140,20 @@ func main() {
 			log.Fatalf("连接 MCP 服务需要令牌: %v", err)
 		}
 		srv.MCPToken = tok
+	}
+
+	// 本机操作人：只有在监听回环地址时才有意义。
+	if *localOp != "" {
+		if isLoopback(*addr) {
+			p, err := people.Authenticate(*localOp, "review")
+			if err != nil {
+				log.Fatalf("本机操作人 %q 不可用: %v", *localOp, err)
+			}
+			srv.LocalOperator = p.EmployeeID
+			log.Printf("本机操作人绑定为 %s（%s）——仅 127.0.0.1 直连生效，跨机仍需令牌", p.EmployeeID, p.Name)
+		} else {
+			log.Printf("忽略 -local-operator：监听 %s 属于跨机访问，身份一律以令牌绑定为准", *addr)
+		}
 	}
 
 	handler := srv.Routes()

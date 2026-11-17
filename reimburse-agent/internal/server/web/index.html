@@ -575,6 +575,7 @@ async function startAudit(opts){
       : {case_id:S.sel, explain:$("#explainSel").value, disabled, faults};
     const r = await jpost(url, body);
     sid = r.session_id;
+    S.sid = sid;
     S.lastTaskID = opts.task_id || r.task_id || null;
     if(r.recheck){
       // 续审时先把"这轮要重查什么"写进日志，读者一眼能看出不是从头再跑。
@@ -695,7 +696,8 @@ function showReport(rep){
       const who = $("#whoSel").value;
       if(!who){ alert("请先在工具栏选择操作人（工号）"); return; }
       try{
-        const r = await jpost("/api/review", {case_id:S.sel, claim_no:rep.claim_no, decision:b.dataset.d,
+        // 带上 session_id：服务端据此用本次真实抽出的发票号写查重记录（真实票据没有标准答案）。
+        const r = await jpost("/api/review", {case_id:S.sel, claim_no:rep.claim_no, session_id:S.sid, decision:b.dataset.d,
           note:$("#reviewNote").value, employee_id:who, decision_before:rep.result.decision});
         b.textContent = "已记录 ✓";
         b.disabled = true;
