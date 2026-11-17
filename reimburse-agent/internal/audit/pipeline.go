@@ -144,6 +144,8 @@ type Report struct {
 	ElapsedMS      int64                  `json:"elapsed_ms"`
 	// Warnings 是降级说明，例如只有一边模型可用、工具超时。
 	Warnings []string `json:"warnings"`
+	// Trace 是逐字段溯源：每个值在原件里出自哪一句，找不到的单独标出。
+	Trace []FieldTrace `json:"field_trace,omitempty"`
 }
 
 // Options 控制一次审核的行为。
@@ -154,6 +156,19 @@ type Options struct {
 	Explain string
 	// OnEvent 为空时只收集事件不回调。
 	OnEvent Emitter
+	// Recheck 是续审计划：补件后哪些判定项要重查、哪些已核验结果可复用。
+	// 为空表示这是首次审核。
+	Recheck *RecheckPlan
+	// ResumeHint 是一句话说明本轮是第几轮续审，写进事件流开头。
+	ResumeHint string
+}
+
+// RecheckPlan 是续审的重查计划（与 task.Recheck 结构一致，避免编排层依赖任务包）。
+type RecheckPlan struct {
+	CheckIDs     []string
+	KeepVerified []string
+	Reverify     []string
+	Reason       string
 }
 
 // Run 执行一次完整审核。
@@ -184,6 +199,14 @@ func Run(e *Engine, ctx context.Context, cl *schema.Claim, invoiceText, supportT
 	}
 
 	emit(StagePlan, "stage", "确定检查范围", rep.Plan[0].Detail, rep.Plan, 0)
+	// 续审时把"复用什么、重查什么"摆出来，让读者一眼看出这不是从头再跑一遍。
+	if opt.Recheck != nil {
+		detail := opt.ResumeHint
+		if opt.Recheck.Reason != "" {
+			detail += "。" + opt.Recheck.Reason
+		}
+		emit(StagePlan, "stage", "续审计划", detail, opt.Recheck, 0)
+	}
 
 	// 1. 双模型抽取
 	src := llm.Source{Category: cl.Category, InvoiceText: invoiceText, SupportText: supportText}
@@ -286,7 +309,7 @@ func Run(e *Engine, ctx context.Context, cl *schema.Claim, invoiceText, supportT
 	// 3. 规则判定
 	// 把宿主类型翻译成插件要求的类型（见 adapter.go）。
 	fields, untrusted, low := toJudgeFields(dual)
-	in := &Input{Claim: toJudgeClaim(cl), Fields: fields, Untrusted: untrusted, LowConfidence: low,
+	in := &Input{Claim: ToJudgeClaim(cl), Fields: fields, Untrusted: untrusted, LowConfidence: low,
 		SupportText: supportText, Tools: tools}
 	res := e.Judge(in)
 	rep.Result = res
@@ -319,6 +342,14 @@ func Run(e *Engine, ctx context.Context, cl *schema.Claim, invoiceText, supportT
 		}
 	} else {
 		emit(StageExplain, "llm_result", "审核意见由规则依据拼接", "未调用模型，避免模型改动金额或条款", nil, 0)
+	}
+
+	// 5. 字段溯源：把每个值回到原件里指出处。
+	//    放在最后做，因为它需要判定结果里的字段四态；且不影响判定。
+	rep.Trace = TraceFields(rep, invoiceText, supportText)
+	if n := countUntraced(rep.Trace); n > 0 {
+		emit(StageAggregate, "warn", fmt.Sprintf("%d 个字段在原件中未找到原文", n),
+			"可能是模型补全或格式改写，已在结果里逐项标出，建议人工核对", nil, 0)
 	}
 
 	rep.ElapsedMS = time.Since(start).Milliseconds()

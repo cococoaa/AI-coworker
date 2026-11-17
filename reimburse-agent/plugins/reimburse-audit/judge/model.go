@@ -44,6 +44,10 @@ type Field struct {
 	Value string
 	// Conf 是合并后的置信度：两侧模型取较小值。
 	Conf float64
+	// Presence 是这一栏在原件上的有无：present / absent / unreadable。
+	// 它把"原件没有"与"看不清"分开——两者都可能是空值，但业务含义完全不同。
+	// 空字符串表示宿主没有提供（旧数据），此时按置信度推断。
+	Presence string
 }
 
 // Missing 表示没有读到值。

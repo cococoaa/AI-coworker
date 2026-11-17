@@ -26,6 +26,7 @@ import (
 	"reimburse/internal/mcpauth"
 	"reimburse/internal/quota"
 	"reimburse/internal/server"
+	"reimburse/internal/task"
 	"reimburse/plugins/reimburse-audit/policy"
 )
 
@@ -44,6 +45,8 @@ func main() {
 	perCaseAlert := flag.Float64("per-case-alert", 0.05, "单张单据成本告警线（美元）")
 	seedUsage := flag.Float64("seed-usage", 0, "演示用：预置本周已用金额（美元），用于一键演示熔断")
 	seedClient := flag.String("seed-client", "reviewer", "演示用：预置用量记到哪个调用方名下")
+	reviewFile := flag.String("review-file", "data/reviews.json", "复核记录文件（落盘，跨重启保留）。空字符串表示只在内存")
+	taskFile := flag.String("task-file", "data/tasks.json", "任务库文件（落盘，跨重启保留）。空字符串表示不启用任务流")
 	demo := flag.Bool("demo-synthetic", false, "无密钥演示模式：模型不可用时用合成抽取，界面会标明「合成」")
 	flag.Parse()
 
@@ -90,6 +93,20 @@ func main() {
 			*weeklyBudget, *quotaPath, quota.WeekKey(time.Now()), q.Check("").UsedUSD)
 	} else {
 		log.Printf("未设置周预算（不限），用量文件 %s", *quotaPath)
+	}
+	if *reviewFile != "" {
+		if err := srv.OpenReviewStore(*reviewFile); err != nil {
+			log.Fatalf("打开复核记录: %v", err)
+		}
+		log.Printf("复核记录 %s（已有 %d 条，含已撤销）", *reviewFile, len(srv.Reviews()))
+	}
+	if *taskFile != "" {
+		tk, err := task.Open(*taskFile)
+		if err != nil {
+			log.Fatalf("打开任务库: %v", err)
+		}
+		srv.Tasks = tk
+		log.Printf("任务库 %s（已有 %d 张单）", *taskFile, len(tk.List()))
 	}
 	if *seedUsage > 0 {
 		st := q.AddUsage(*seedClient, *seedUsage)

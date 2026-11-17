@@ -16,6 +16,7 @@ import (
 	"reimburse/internal/identity"
 	"reimburse/internal/llm"
 	"reimburse/internal/quota"
+	"reimburse/internal/task"
 	"reimburse/plugins/reimburse-audit/policy"
 )
 
@@ -44,6 +45,16 @@ func testServer(t *testing.T) *Server {
 		t.Fatal(err)
 	}
 	s.People = people
+	// 任务库与复核记录给临时文件：否则同一包里的测试会互相影响
+	// （一个测试写的任务会出现在另一个测试的待办列表里）。
+	tk, err := task.Open(filepath.Join(t.TempDir(), "tasks.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Tasks = tk
+	if err := s.OpenReviewStore(filepath.Join(t.TempDir(), "reviews.json")); err != nil {
+		t.Fatal(err)
+	}
 	return s
 }
 
@@ -151,7 +162,11 @@ func TestAuditSSE(t *testing.T) {
 		t.Fatalf("返回不完整: %+v", start)
 	}
 
-	// 等审核结束，再读事件流：此时以 snapshot(done=true)+report+done 收尾。
+	// 等审核结束，再读事件流：此时以 snapshot+report+done 收尾。
+	//
+	// 注意：第一次连上来时审核可能刚开始（snapshot 里 done=false、report=null），
+	// 之后事件实时推送、结束时补发 report。所以这里以"读到 done"为准，
+	// 而不是假定首个 snapshot 就已完成——那个竞态真实存在，也真的会让人看到空结论。
 	deadline := time.Now().Add(30 * time.Second)
 	for {
 		rec = httptest.NewRecorder()
@@ -180,7 +195,17 @@ func TestAuditSSE(t *testing.T) {
 	if err := json.Unmarshal([]byte(evs["snapshot"][0]), &snap); err != nil {
 		t.Fatal(err)
 	}
-	if !snap.Done || snap.Report == nil {
+	// 连接时审核可能还在跑：此时 snapshot 是"进行中"，报告在收尾的 report 事件里。
+	// 两种形态都合法，但最终必须有完整报告与 done。
+	if !snap.Done {
+		var final audit.Report
+		if err := json.Unmarshal([]byte(evs["report"][0]), &final); err != nil {
+			t.Fatalf("收尾的 report 事件无法解析: %v", err)
+		}
+		snap.Report = &final
+		snap.Events = append(snap.Events, final.Events...)
+	}
+	if snap.Report == nil {
 		t.Fatal("事件流结束时必须带完整报告")
 	}
 	if len(snap.Events) < 10 {

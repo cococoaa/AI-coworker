@@ -23,3 +23,6 @@ tokens.txt
 .DS_Store
 quota.json
 people.json
+# 运行时数据：任务库与复核记录由程序自己创建，仓库里不带状态
+tasks.json
+reviews.json

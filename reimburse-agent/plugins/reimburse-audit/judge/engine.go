@@ -35,8 +35,10 @@ type view struct {
 	inv      invoiceView
 	amount   int64
 	amountOK bool
-	// 不可信字段
+	// 不可信字段（不可用作出判定依据）
 	bad map[FieldName]bool
+	// statuses 是每个字段的四态，区分"原件没有"与"看不清"
+	statuses Statuses
 	// in 是原始输入，佐证凭证文本从中读取。
 	in *Input
 }
@@ -63,34 +65,25 @@ func (e *Engine) Judge(in *Input) *Result {
 			evid[id] = append(evid[id], ev...)
 		}
 	}
-	// need 检查依赖的字段是否可信；不可信就记入 Skipped 并不作判定。
+	// need 检查依赖的字段能否作为判定依据。
+	//
+	// 关键变化：Absent（原件确实没填）**可以用**——"这张票没有税号"是可判定的业务事实；
+	// 只有 Unreadable / Ambiguous 才跳过。早先一律按"值为空"跳过，
+	// 导致 C24 那种"确实没税号"被误当成"读不出税号"，依据写成 R15 而不是 R02-b。
 	need := func(id string, fields ...FieldName) bool {
 		for _, f := range fields {
-			if v.bad[f] {
-				if _, ok := res.Skipped[id]; !ok {
-					res.Skipped[id] = "字段 " + FieldCN(f) + " 不可信（" + v.badWhy(f, in) + "）"
-				}
-				return false
+			if v.statuses.Of(f).Usable() {
+				continue
 			}
+			if _, ok := res.Skipped[id]; !ok {
+				res.Skipped[id] = "字段 " + StatusLabel(f, v.statuses.Of(f))
+			}
+			return false
 		}
 		return true
 	}
-	// trusted 与 need 相同，但允许值为空：字段值本身可能真的是空（如个人抬头没有税号），
-	// 只要读取过程可信、置信度够，就应当据此判定，而不是跳过。
-	trusted := func(id string, fields ...FieldName) bool {
-		for _, f := range fields {
-			if in.Untrusted[f] {
-				res.Skipped[id] = "字段 " + FieldCN(f) + " 两个模型抽取不一致"
-				return false
-			}
-			fv, ok := in.Fields[f]
-			if !ok || fv.Conf < v.p.LowConfidenceThreshold {
-				res.Skipped[id] = "字段 " + FieldCN(f) + " 不可信（" + v.badWhy(f, in) + "）"
-				return false
-			}
-		}
-		return true
-	}
+	// trusted 与 need 同义，保留名字便于阅读；现在 Absent 也算可信。
+	trusted := need
 	// tool 检查工具是否给出了可用结果。
 	tool := func(t, id string) (ToolOutcome, bool) {
 		tr, ok := in.Tools[t]
@@ -452,10 +445,16 @@ func (e *Engine) Judge(in *Input) *Result {
 		if !ok {
 			continue
 		}
-		if in.Untrusted[f] {
+		st := v.statuses.Of(f)
+		switch {
+		case st == Absent:
+			// 原件确实没填：这是业务事实，不构成"核验失败"。
+			// 它会由依赖它的具体判定项（如 R02-b 税号缺失）处理，而不是在这里兜底转人工。
+		case st == Ambiguous:
 			lowWhy = append(lowWhy, FieldCN(f)+" 两个模型抽取不一致")
-		} else if fv.Conf < p.LowConfidenceThreshold {
-			lowWhy = append(lowWhy, fmt.Sprintf("%s 置信度 %.2f 低于 %.2f", FieldCN(f), fv.Conf, p.LowConfidenceThreshold))
+		case st == Unreadable:
+			lowWhy = append(lowWhy, fmt.Sprintf("%s 无法识别（置信度 %.2f 低于 %.2f）",
+				FieldCN(f), fv.Conf, p.LowConfidenceThreshold))
 		}
 	}
 	add("R15-b", len(lowWhy) > 0, strings.Join(lowWhy, "；"), "llm.extraction")
@@ -472,6 +471,7 @@ func (e *Engine) Judge(in *Input) *Result {
 		}
 	}
 	res.ClaimAmountFen = cl.AmountFen
+	res.FieldStatus = v.statuses
 	res.Decision = e.RF.Aggregate(res.Hits)
 	switch res.Decision {
 	case policy.Approve:
@@ -494,11 +494,25 @@ func (e *Engine) Judge(in *Input) *Result {
 
 func (e *Engine) view(in *Input) *view {
 	p := &e.RF.Params
-	v := &view{claim: in.Claim, p: p, bad: map[FieldName]bool{}, in: in}
+	v := &view{claim: in.Claim, p: p, bad: map[FieldName]bool{},
+		statuses: Statuses{}, in: in}
 	for _, f := range FieldNames() {
 		fv, ok := in.Fields[f]
-		if !ok || fv.Value == "" || fv.Conf < p.LowConfidenceThreshold || in.Untrusted[f] {
+		// 由合并结果反推单侧信息：Fields 里是"两侧一致后的值"，
+		// 因此这里能可靠判断的只有"有没有值 / 置信度 / 是否被标为不一致"。
+		// 两侧都空且有高置信度 → 分类器判为 Absent（原件确实没有）。
+		// 优先用模型显式给出的 presence；没有时才退回按置信度推断。
+		st, decided := ClassifyFieldByPresence(f, fv, in.Untrusted[f], p.LowConfidenceThreshold)
+		if !decided {
+			st = ClassifyField(f, fv, fv, ok, ok, in.Untrusted[f], p.LowConfidenceThreshold)
+		}
+		v.statuses[f] = st
+		if !st.Usable() {
 			v.bad[f] = true
+			continue
+		}
+		// Absent 没有值，不需要往下解析；它本身作为"缺失的事实"参与判定。
+		if st == Absent {
 			continue
 		}
 		switch f {
@@ -507,6 +521,7 @@ func (e *Engine) view(in *Input) *view {
 		case FIssueDate:
 			d, err := normDate(fv.Value)
 			if err != nil {
+				v.statuses[f] = Ambiguous
 				v.bad[f] = true
 				continue
 			}
@@ -514,6 +529,7 @@ func (e *Engine) view(in *Input) *view {
 		case FTotalAmount:
 			fenVal, err := parseYuan(fv.Value)
 			if err != nil {
+				v.statuses[f] = Ambiguous
 				v.bad[f] = true
 				continue
 			}
@@ -534,24 +550,6 @@ func (e *Engine) view(in *Input) *view {
 		v.inv.InvoiceNo = ""
 	}
 	return v
-}
-
-func (v *view) badWhy(f FieldName, in *Input) string {
-	var ws []string
-	if in.Untrusted[f] {
-		ws = append(ws, "两个模型不一致")
-	}
-	if fv, ok := in.Fields[f]; ok {
-		if fv.Value == "" {
-			ws = append(ws, "未能读取")
-		} else if fv.Conf < v.p.LowConfidenceThreshold {
-			ws = append(ws, fmt.Sprintf("置信度 %.2f", fv.Conf))
-		}
-	}
-	if len(ws) == 0 {
-		ws = append(ws, "无法解析")
-	}
-	return strings.Join(ws, "，")
 }
 
 func findInvoice(tr ToolOutcome, no string) *InvoiceRecord {

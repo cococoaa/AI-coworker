@@ -23,6 +23,7 @@ import (
 	"reimburse/internal/llm"
 	"reimburse/internal/quota"
 	"reimburse/internal/schema"
+	"reimburse/internal/task"
 	"reimburse/plugins/reimburse-audit/policy"
 )
 
@@ -43,12 +44,17 @@ type Session struct {
 	Started time.Time
 	// QuotaClient 是调用方标识（令牌名），审核完成后按它分桶记账。
 	QuotaClient string
+	// TaskID 非空表示这次审核属于某个任务（续审时）。
+	TaskID string
+	// OnFinish 在审核完成后回调，用于更新任务状态。
+	OnFinish func(*audit.Report)
 
-	mu     sync.Mutex
-	events []audit.Event
-	report *audit.Report
-	err    string
-	done   chan struct{}
+	mu       sync.Mutex
+	events   []audit.Event
+	report   *audit.Report
+	err      string
+	done     chan struct{}
+	doneOnce sync.Once
 	// listeners 是正在订阅的 SSE 连接。
 	listeners map[chan audit.Event]bool
 }
@@ -74,6 +80,8 @@ type Server struct {
 	People *identity.Registry
 	// Quota 是周预算；为空时不限制。
 	Quota *quota.Store
+	// Tasks 是任务生命周期库；为空时不启用任务流。
+	Tasks *task.Store
 	// llmClient 延迟创建，便于测试替换。
 	llmClient *llm.Client
 	// ReplayDir 不为空时，实时调用失败就回放录制；界面会标明"回放"。
@@ -113,6 +121,36 @@ func (s *Server) Find(id string) (*schema.Case, bool) {
 	return nil, false
 }
 
+// StartTask 是续审入口：在已有任务上再跑一轮，并把 recheck 计划写进事件流。
+//
+// 与 Start 的区别只在于"起点"：Start 是全新单据，StartTask 带着上一轮的
+// 补件清单与续审计划，审完会更新任务状态（轮次 +1）。
+func (s *Server) StartTask(c *schema.Case, t *task.Task, opt audit.Options, explain string, disabled []string) *Session {
+	// 续审前先把"上一轮查了什么、这轮要重查什么"告诉读者。
+	opt.Recheck = convertRecheck(t.NextRecheck)
+	opt.ResumeHint = fmt.Sprintf("第 %d 轮续审：材料已补齐（%d 份附件），复用已核验结果，只重查受影响的判定项",
+		len(t.Runs)+1, len(t.Attachments))
+
+	// 关键：把补交的材料真正喂进判定。
+	// 否则"补交"只是登记了一个文件名，续审还是拿原始缺件重跑，结论不会变——
+	// 那这个闭环就是假的。这里按补件类型把内容落到单据上（佐证凭证、报销单字段等）。
+	eff, unknown := applySupplements(c, t)
+	if len(t.Attachments) > 0 {
+		opt.ResumeHint += fmt.Sprintf("；已把 %d 份补交材料写入单据", len(t.Attachments))
+	}
+	if len(unknown) > 0 {
+		opt.ResumeHint += "；以下补交项无法对应到单据字段，未采用：" + strings.Join(unknown, "、")
+	}
+
+	sess := s.Start(eff, opt, explain, disabled)
+	sess.TaskID = t.ID
+	// 审核完成后把结论落到任务状态上。
+	sess.OnFinish = func(rep *audit.Report) {
+		s.applyReportToTask(t.ID, rep, c)
+	}
+	return sess
+}
+
 // Start 启动一次审核，立即返回 session，事件通过 SSE 订阅。
 func (s *Server) Start(c *schema.Case, opt audit.Options, explain string, disabled []string) *Session {
 	sess := &Session{ID: fmt.Sprintf("S%d", time.Now().UnixNano()), CaseID: c.ID, Started: time.Now(),
@@ -122,7 +160,7 @@ func (s *Server) Start(c *schema.Case, opt audit.Options, explain string, disabl
 	s.mu.Unlock()
 
 	go func() {
-		defer close(sess.done)
+		defer sess.markDone()
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 
@@ -181,13 +219,27 @@ func (s *Session) finish(rep *audit.Report) {
 	s.mu.Lock()
 	s.report = rep
 	s.mu.Unlock()
+	if s.OnFinish != nil {
+		s.OnFinish(rep)
+	}
+	// 顺序要紧：先标记完成，再通知订阅者通道关闭。
+	// 反过来会出现一个窗口——订阅者收到"流结束"，去读快照，却被告知"还没完成"。
+	s.markDone()
 	s.broadcastClose()
+}
+
+// markDone 关闭 done 通道，表示本次审核已经结束。
+// 必须在广播"订阅结束"之前调用：订阅方收到通道关闭后会立刻读一次快照，
+// 如果那时 done 还没关闭，快照会返回"未完成且没有报告"——界面就会看到空结论。
+func (s *Session) markDone() {
+	s.doneOnce.Do(func() { close(s.done) })
 }
 
 func (s *Session) fail(msg string) {
 	s.mu.Lock()
 	s.err = msg
 	s.mu.Unlock()
+	s.markDone()
 	s.broadcastClose()
 }
 
@@ -230,6 +282,16 @@ func (s *Session) subscribe() (chan audit.Event, func()) {
 	}
 }
 
+// OpenReviewStore 打开复核记录文件。path 为空表示只在内存（重启即失，仅测试用）。
+//
+// 线上必须落盘：复核结论会改变查重结果，重启后丢了，下一次同票就会被放行。
+func (s *Server) OpenReviewStore(path string) error {
+	if path == "" {
+		return nil
+	}
+	return s.reviews.OpenPath(path)
+}
+
 // AddReview 记录人工复核结论，并把"通过"类结论写进查重库。
 //
 // 这是本项目的记忆机制：人纠正过的结论会改变下一次查重的结果。
@@ -239,7 +301,13 @@ func (s *Server) AddReview(r ReviewOutcome, history *schema.HistRecord) (ReviewO
 	if !ok {
 		return ReviewOutcome{}, fmt.Errorf("用例不存在: %s", r.CaseID)
 	}
-	saved := s.reviews.Add(r)
+	saved, dup := s.reviews.AddIdem(r)
+	if dup {
+		// 重复提交：不新增记录，也不重复回写查重库。
+		// 但要把"这是重复提交"告诉调用方，避免界面显示成两次不同结论。
+		saved.Duplicate = true
+		return saved, nil
+	}
 
 	// 只有"通过"类结论才写查重库：驳回的结论代表这张票不该报，
 	// 写进去反而会让它以后被判"已报销过"，语义是错的。

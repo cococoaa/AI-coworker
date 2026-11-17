@@ -122,6 +122,46 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
 .reviewbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .reviewbtns button{flex:1;font-size:12px;padding:6px 4px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);cursor:pointer}
 .reviewbtns button:hover{color:var(--fg);border-color:#3b4252}
+/* 任务队列：财务最先要看的是"哪些单卡住了"，不是"有哪些单据" */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:transparent;border:none;border-bottom:2px solid transparent;
+  color:var(--faint);font-size:12px;padding:9px 4px;cursor:pointer;font-family:inherit}
+.tabs button.on{color:var(--fg);border-bottom-color:#1f6feb}
+.tabs .n{display:inline-block;min-width:16px;padding:0 4px;border-radius:8px;background:#2a2f3a;
+  color:var(--dim);font-size:10px;margin-left:4px}
+.tabs button.on .n{background:#1f3346;color:#a8c7fa}
+.taskitem{padding:8px 10px;border-radius:7px;cursor:pointer;border:1px solid transparent;
+  border-left:3px solid var(--line)}
+.taskitem:hover{background:var(--panel2)}
+.taskitem.sel{background:#1b2230;border-color:#2f4a6f;border-left-color:#1f6feb}
+.taskitem .top{display:flex;gap:6px;align-items:center;font-size:12px}
+.taskitem .tid{font-family:var(--mono);color:var(--faint);font-size:11px}
+.taskitem .st{font-size:10px;padding:1px 6px;border-radius:9px;border:1px solid var(--line);color:var(--dim)}
+.taskitem .st.need_more{color:var(--warn);border-color:#4a3b12;background:#1e1a0c}
+.taskitem .st.need_manual{color:#c9d1d9;border-color:#3a3f52;background:#171b24}
+.taskitem .st.approved{color:var(--ok);border-color:#1d4025;background:#0d1f12}
+.taskitem .st.rejected{color:var(--bad);border-color:#5a2321;background:#22100f}
+.taskitem .st.auditing{color:var(--info);border-color:#243b5a;background:#0d1622}
+.taskitem .st.withdrawn{color:var(--faint)}
+.taskitem .sub{font-size:11px;color:var(--faint);margin-top:3px}
+.taskitem .who{color:#a8c7fa}
+.taskitem .miss{font-size:11px;color:var(--warn);margin-top:3px}
+.gap{padding:12px 14px;color:var(--faint);font-size:12px;text-align:center}
+/* 溯源表 */
+.tracetable{width:100%;border-collapse:collapse;font-size:11.5px}
+.tracetable th{text-align:left;color:var(--faint);font-weight:500;padding:3px 6px;border-bottom:1px solid var(--line)}
+.tracetable td{padding:4px 6px;border-bottom:1px solid #1d222b;vertical-align:top}
+.tracetable td.f{color:var(--dim);white-space:nowrap}
+.tracetable td.v{font-family:var(--mono);word-break:break-all}
+.tracetable .q{color:var(--faint);font-size:11px;margin-top:2px;line-height:1.45}
+.tracetable tr.nf{background:#1a1810}
+.tracetable tr.nf td.v{color:#ffd98a}
+.tracetable tr.sup{background:#1a1610}
+.srcbadge{font-size:10px;padding:0 5px;border-radius:4px;white-space:nowrap}
+.srcbadge.invoice{background:#0d1f12;color:#7ee787;border:1px solid #1d4025}
+.srcbadge.support{background:#1e1a0c;color:#e3c07b;border:1px solid #4a3b12}
+.srcbadge.none{background:#22100f;color:#ff9b94;border:1px solid #5a2321}
+.srcbadge.empty{background:#1a1e26;color:var(--faint);border:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -132,15 +172,25 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
   <span id="m-cl" class="badge"></span>
   <span id="m-tools" class="badge"></span>
   <span style="flex:1"></span>
+  <span id="m-prov" class="badge" title=""></span>
   <span id="m-quota" class="badge" title="本周 AI 用量"></span>
   <span id="m-cost" class="badge"></span>
 </header>
 
 <main>
   <section class="panel">
-    <h2>待审单据 <span id="caseCount" class="muted"></span></h2>
-    <div class="filters" id="filters"></div>
-    <div id="cases"></div>
+    <div class="tabs">
+      <button id="tabTasks" class="on">进行中 <span class="n" id="taskCount">0</span></button>
+      <button id="tabCases">全部单据 <span class="n" id="caseCount">0</span></button>
+    </div>
+    <div id="taskPane">
+      <div class="filters" id="taskFilters"></div>
+      <div id="tasks"></div>
+    </div>
+    <div id="casePane" style="display:none">
+      <div class="filters" id="filters"></div>
+      <div id="cases"></div>
+    </div>
   </section>
 
   <section class="panel">
@@ -176,7 +226,8 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
 
 <script>
 const $ = s => document.querySelector(s);
-const S = {cases:[], cat:"all", sel:null, ses:null, es:null, evCount:0, report:null};
+const S = {cases:[], cat:"all", sel:null, ses:null, es:null, evCount:0, report:null,
+  tasks:[], tab:"tasks", taskFilter:"waiting", taskID:null, task:null};
 
 const DEC = {approve:"通过",approve_with_adjustment:"调整后通过",manual_review:"转人工复核",need_more_info:"退回补材料",reject:"驳回"};
 const STAGE = [{k:"plan",n:"确定范围"},{k:"extract",n:"双模型抽取"},{k:"tools",n:"工具核验"},{k:"aggregate",n:"规则判定"},{k:"explain",n:"审核意见"}];
@@ -195,6 +246,14 @@ async function boot(){
   $("#m-cl").textContent = `Claude ${cm.key_ready?"就绪":"未配置密钥"}`;
   $("#m-cl").className = "badge " + (cm.key_ready?"ok":"");
   $("#m-tools").textContent = `MCP 工具 ${meta.tools.mode==="remote"?"远程":"进程内"} · 3 个`;
+  // 两个"真实"分开说：模型可以真跑，核验数据仍是 mock。避免"真实模型"被读成全链路真实。
+  if(meta.provenance){
+    const pv = meta.provenance;
+    const el = $("#m-prov");
+    el.textContent = pv.model_live ? "模型：真实调用 ／ 票据：合成 ／ 核验：mock"
+                                  : "模型：未配置 ／ 票据：合成 ／ 核验：mock";
+    el.title = pv.note + "。本系统的结论只代表对合成数据的判定，不代表真实票据识别能力。";
+  }
   if(!dm.key_ready && !cm.key_ready){
     $("#m-ds").title = "两种模式：配了密钥走真实模型；未配置时按启动参数决定回放录制或合成演示";
     const tip = document.createElement("span");
@@ -208,6 +267,146 @@ async function boot(){
   await loadPeople();
   await loadQuota();
   await loadCases();
+  await loadTasks();
+}
+
+// ---- 任务队列 ----
+// 财务上班第一件事是问"哪些单卡住了、卡在谁那里"，所以默认视图是进行中的任务，
+// 而不是单据清单。单据清单退到第二个页签（演示时需要它挑单）。
+
+async function loadTasks(){
+  let d;
+  try{ d = await jget("/api/tasks"); }
+  catch(e){ $("#tasks").innerHTML = `<div class="gap">任务库不可用：${esc(e.message)}</div>`; return; }
+  if(!d.enabled){
+    $("#tasks").innerHTML = '<div class="gap">未启用任务库（启动时 -task-file 为空）</div>';
+    return;
+  }
+  S.tasks = d.tasks || [];
+  const active = S.tasks.filter(t=>!["approved","rejected","withdrawn"].includes(t.state));
+  $("#taskCount").textContent = active.length;
+  const waitMore = active.filter(t=>t.state==="need_more").length;
+  const waitManual = active.filter(t=>t.state==="need_manual").length;
+  $("#taskFilters").innerHTML = [
+    ["waiting", `卡住的 ${waitMore+waitManual}`],
+    ["need_more", `待补材料 ${waitMore}`],
+    ["need_manual", `待复核 ${waitManual}`],
+    ["all", `全部 ${S.tasks.length}`],
+  ].map(([k,n])=>`<button data-f="${k}" class="${S.taskFilter===k?"on":""}">${n}</button>`).join("");
+  $("#taskFilters").querySelectorAll("button").forEach(b=>b.onclick=()=>{S.taskFilter=b.dataset.f;loadTasks();});
+
+  let list = S.tasks;
+  if(S.taskFilter==="waiting") list = S.tasks.filter(t=>t.state==="need_more"||t.state==="need_manual");
+  else if(S.taskFilter!=="all") list = S.tasks.filter(t=>t.state===S.taskFilter);
+
+  if(list.length===0){
+    $("#tasks").innerHTML = `<div class="gap">${S.taskFilter==="waiting"?"没有卡住的单":"没有任务"}<br>
+      <span class="muted">在「全部单据」里选一张开始审核，任务会自动建出来</span></div>`;
+    return;
+  }
+  $("#tasks").innerHTML = list.map(t=>{
+    const miss = (t.outstanding_labels||[]).join("、");
+    return `<div class="taskitem ${S.taskID===t.id?"sel":""}" data-t="${esc(t.id)}">
+      <div class="top">
+        <span class="st ${t.state}">${esc(t.state_label)}</span>
+        <span class="tid">${esc(t.id)}</span>
+        <span style="flex:1"></span>
+        <span class="tid">${esc(t.case_id)}</span>
+      </div>
+      <div class="sub">卡在 <span class="who">${esc(t.waiting_on)}</span> · ${t.waiting_days>0?`已 ${t.waiting_days} 天`:"今天"} · 第 ${t.rounds||0} 轮</div>
+      ${miss?`<div class="miss">缺：${esc(miss)}</div>`:""}
+    </div>`;
+  }).join("");
+  $("#tasks").querySelectorAll(".taskitem").forEach(el=>el.onclick=()=>openTask(el.dataset.t));
+}
+
+// openTask 展开一张任务：补件清单、材料版本、续审计划、事件轨迹。
+async function openTask(id){
+  S.taskID = id;
+  await loadTasks();
+  let d;
+  try{ d = await jget("/api/tasks/"+id); }
+  catch(e){ $("#result").innerHTML = `<div class="warnbar">读取任务失败：${esc(e.message)}</div>`; return; }
+  const t = d.task; S.task = t;
+  const c = S.cases.find(x=>x.id===t.case_id);
+  if(c) S.sel = t.case_id;
+
+  const stTxt = t.state==="need_more" ? "退回补材料" : t.state==="need_manual" ? "转人工复核"
+    : t.state==="pending" ? "待审核" : t.state==="approved" ? "初审通过" : t.state==="rejected" ? "已驳回" : "已撤销";
+  const kindName = {absent:"原件未填写", unreadable:"无法辨认", ambiguous:"两模型不一致", missing_attachment:"整份缺失"};
+  const items = (t.missing||[]).map(m=>`<div class="finding-row" style="${m.resolved?"opacity:.5;border-left-color:var(--ok)":""}">
+    <div class="h">${esc(m.label)} · ${kindName[m.kind]||m.kind}${m.resolved?' <span style="color:var(--ok)">已补交</span>':""}</div>
+    <div class="r">${esc(m.reason)}${m.clause?`（依据 ${esc(m.clause)}）`:""}</div>
+    ${m.resolved?"":`<div style="margin-top:6px">${m.hint?`<div class="muted" style="margin-bottom:3px">${esc(m.hint)}</div>`:""}<input class="supInput" data-k="${esc(m.key)}"
+       placeholder="粘贴补交材料正文；只填文件名不算补交" style="width:100%;background:var(--panel2);
+       border:1px solid var(--line);color:var(--fg);border-radius:5px;padding:4px 7px;font-size:11.5px;font-family:inherit">
+       <button class="ghost supBtn" data-k="${esc(m.key)}" data-l="${esc(m.label)}"
+       style="margin-top:4px;font-size:11px">提交补交</button></div>`}
+  </div>`).join("");
+
+  const atts = (t.attachments||[]).map(a=>`<div class="rvitem">v${a.version} · ${esc(a.name)}
+    · ${esc(a.by||"")} · ${esc((a.at||"").slice(0,16).replace("T"," "))}
+    ${a.note?`· ${esc(a.note)}`:""}</div>`).join("");
+
+  const rc = t.next_recheck;
+  const rcBox = rc ? `<div class="muted" style="margin-top:4px">续审时重查 ${(rc.check_ids||[]).length} 项判定：
+    ${esc((rc.check_ids||[]).join("、")||"无")}<br>复用已核验：${esc((rc.keep_verified||[]).join("、")||"无")}
+    <br>必须重查：${esc((rc.reverify||[]).join("、")||"无")}</div>` : "";
+
+  const runs = (t.runs||[]).map(r=>`<div class="rvitem">第 ${r.round} 轮 · ${DEC[r.decision]||r.decision}
+    · 核准 ${yuan(r.approved_fen)} · ${r.elapsed_ms||0}ms · $${(r.cost_usd||0).toFixed(5)}
+    ${r.trigger?`· ${r.trigger==="reaudit"?"续审":"首次"}`:""}</div>`).join("");
+
+  const evs = (t.events||[]).map(e=>`<div class="rvitem">${esc((e.at||"").slice(0,16).replace("T"," "))}
+    · ${esc(e.detail)}${e.by?` <span class="who">${esc(e.by)}</span>`:""}</div>`).join("");
+
+  const canReaudit = (t.state==="pending"||t.state==="need_more") && !(t.missing||[]).some(m=>!m.resolved);
+
+  $("#result").innerHTML = `
+    <div class="verdict v-${t.state==="approved"?"approve":t.state==="rejected"?"reject":t.state==="need_more"?"need_more_info":"manual_review"}">
+      <div class="big">${stTxt}</div>
+      <div class="amt">${esc(t.claim_no)} · ${esc(t.id)} · 第 ${(t.runs||[]).length} 轮</div>
+      <div class="muted" style="margin-top:6px">卡在：<b style="color:#a8c7fa">${esc(d.waiting_on)}</b></div>
+    </div>
+    <h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">补件清单（${(t.missing||[]).filter(m=>!m.resolved).length}/${(t.missing||[]).length} 项待补）</h3>
+    ${items || '<div class="muted">没有缺件</div>'}
+    ${canReaudit?`<button class="primary" id="reauditBtn" style="margin-top:10px;width:100%">
+      ${(t.runs||[]).length>0?"续审（复用已核验结果）":"开始审核"}</button>`:
+      t.state==="need_more"?`<div class="warnbar">还有 ${(t.missing||[]).filter(m=>!m.resolved).length} 项没补齐，不能续审</div>`:""}
+    <div id="taskMsg" style="margin-top:8px"></div>
+    ${rcBox}
+    ${atts?`<h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">材料版本</h3>${atts}`:""}
+    ${runs?`<h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">审核批次</h3>${runs}`:""}
+    ${evs?`<h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">任务轨迹</h3>${evs}`:""}
+    <div style="margin-top:10px"><button class="ghost" id="taskBackBtn">← 回到任务列表</button></div>`;
+
+  $("#taskBackBtn").onclick = ()=>{ S.taskID=null; S.task=null; loadTasks(); $("#result").innerHTML='<div class="empty">还没有结果</div>'; };
+  if($("#reauditBtn")) $("#reauditBtn").onclick = ()=>startAudit({task_id:t.id});
+  $("#result").querySelectorAll(".supBtn").forEach(b=>{
+    b.onclick = ()=>submitSupport(t.id, b.dataset.k, b.dataset.l, b);
+  });
+}
+
+// submitSupport 提交一项补交材料，然后刷新任务。
+async function submitSupport(taskID, key, label, btn){
+  const input = document.querySelector(`.supInput[data-k="${key}"]`);
+  const content = input ? input.value.trim() : "";
+  if(!content){ alert("请粘贴补交材料的正文。只登记文件名，续审时判定不会变。"); return; }
+  const who = $("#whoSel").value;
+  btn.disabled = true;
+  try{
+    const r = await jpost(`/api/tasks/${taskID}/resubmit`, {
+      kind:key, name:label, note:"界面补交", content, employee_id:who});
+    // 幂等命中也算成功，但要说清楚没有新增版本。
+    const msg = r.duplicate ? "这份材料之前已经提交过，本次没有重复登记。" : "已登记，材料版本 +1。";
+    const next = (r.next||{}).message||"";
+    await loadTasks();
+    await openTask(taskID);
+    $("#taskMsg").innerHTML = `<div class="warnbar">${esc(msg)} ${esc(next)}</div>`;
+  }catch(e){
+    btn.disabled = false;
+    $("#taskMsg").innerHTML = `<div class="warnbar">提交失败：${esc(e.message)}</div>`;
+  }
 }
 
 // loadPeople 拉工号名单，填充"当前操作人"；没有名单时禁用复核并说明原因。
@@ -346,8 +545,11 @@ function pretty(ev){
   return JSON.stringify(ev.data,null,2);
 }
 
-async function run(){
-  if(!S.sel) return;
+// startAudit 启动一次审核。opts.task_id 非空表示这是续审（在已有任务上再跑一轮）。
+// 首次审核与续审走同一条事件流、同一个报告渲染，区别只在服务端：续审带重查计划。
+async function startAudit(opts){
+  opts = opts || {};
+  if(!opts.task_id && !S.sel) return;
   const faults = [];
   const f = $("#faultSel").value;
   if(f){ const [tool,mode] = f.split("="); faults.push({tool,mode}); }
@@ -357,19 +559,32 @@ async function run(){
   if(disabled.length===2){ alert("两个模型都关掉就没有任何字段可用，请至少保留一个"); return; }
 
   $("#runBtn").disabled = true;
-  $("#runState").innerHTML = '<span class="spin"></span>运行中';
-  $("#result").innerHTML = '<div class="empty">审查进行中…</div>';
+  $("#runState").innerHTML = '<span class="spin"></span>' + (opts.task_id ? "续审中" : "运行中");
+  // 任务视图里点"续审"时，右栏还是任务详情，直接覆盖会丢上下文；
+  // 所以这里只把运行状态放到左栏日志区顶部。
+  if(!opts.task_id) $("#result").innerHTML = '<div class="empty">审查进行中…</div>';
   S.evCount = 0; S.report = null;
   renderSteps("plan");
   if(S.es){ S.es.close(); S.es = null; }
 
   let sid;
   try{
-    const r = await jpost("/api/audit", {case_id:S.sel, explain:$("#explainSel").value, disabled, faults});
+    const url = opts.task_id ? `/api/tasks/${opts.task_id}/reaudit` : "/api/audit";
+    const body = opts.task_id
+      ? {explain:$("#explainSel").value, disabled, faults}
+      : {case_id:S.sel, explain:$("#explainSel").value, disabled, faults};
+    const r = await jpost(url, body);
     sid = r.session_id;
+    S.lastTaskID = opts.task_id || r.task_id || null;
+    if(r.recheck){
+      // 续审时先把"这轮要重查什么"写进日志，读者一眼能看出不是从头再跑。
+      addEvent({seq:0, stage:"plan", kind:"stage", title:"续审计划",
+        detail:`复用：${(r.recheck.keep_verified||[]).join("、")||"无"}；重查判定 ${(r.recheck.check_ids||[]).length} 项`});
+    }
   }catch(e){
     $("#runState").textContent = "启动失败";
-    $("#result").innerHTML = `<div class="warnbar">启动失败：${esc(e.message)}</div>`;
+    const box = opts.task_id ? $("#taskMsg") : $("#result");
+    if(box) box.innerHTML = `<div class="warnbar">启动失败：${esc(e.message)}</div>`;
     $("#runBtn").disabled = false;
     return;
   }
@@ -389,7 +604,9 @@ async function run(){
     $("#runBtn").disabled = false;
     const d = JSON.parse(e.data);
     $("#runState").textContent = d.ok ? "完成" : "异常结束";
-    const st = jget("/api/stats").then(x=>{ $("#m-cost").textContent = `本次运行 ${x.sessions||0} 单 · 成本约 $${(x.cost_usd||0).toFixed(5)}`; });
+    jget("/api/stats").then(x=>{ $("#m-cost").textContent = `本次运行 ${x.sessions||0} 单 · 成本约 $${(x.cost_usd||0).toFixed(5)}`; }).catch(()=>{});
+    // 任务状态变了（退回补材料 / 转人工 / 通过），列表与详情都要刷新。
+    if(S.lastTaskID){ loadTasks(); if(S.taskID===S.lastTaskID) openTask(S.lastTaskID); S.lastTaskID=null; }
   });
   es.onerror = ()=>{
     // 浏览器会自动重连；重连后 snapshot 会把已发生的事件补齐。
@@ -417,6 +634,27 @@ function showReport(rep){
     return `<tr class="${bad?"bad":""}"><td>${label}</td><td class="v">${esc(v.value||"—")}</td><td>${conf.toFixed(2)}</td></tr>`;
   }).join("") : "";
 
+  // 字段溯源：每个值回原件里指出处。找不到的单独标黄——那可能不是错，但必须让人看一眼。
+  const traceBox = (rep.field_trace||[]).length ? (()=>{
+    const srcName = {invoice:"发票原文", support:"仅佐证凭证", none:"原件未找到", empty:"空值"};
+    const rows = rep.field_trace.map(t=>{
+      const cls = t.source==="none" ? "nf" : t.source==="support" ? "sup" : "";
+      return `<tr class="${cls}">
+        <td class="f">${esc(t.label)}</td>
+        <td class="v">${esc(t.value||"—")}
+          ${t.snippet?`<div class="q">${esc(t.snippet)}</div>`:""}
+          ${t.note?`<div class="q" style="color:var(--warn)">${esc(t.note)}</div>`:""}</td>
+        <td><span class="srcbadge ${t.source}">${srcName[t.source]||t.source}</span></td>
+      </tr>`;
+    }).join("");
+    const nf = rep.field_trace.filter(t=>t.source==="none").length;
+    return `<h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">字段溯源
+      ${nf?`<span style="color:var(--warn)">（${nf} 个在原件中未找到原文）</span>`:""}</h3>
+      <div class="muted" style="margin-bottom:4px">每个值都回到送进模型的那份原文里找过，并摘出上下文。
+        「仅佐证凭证」表示发票上没有、只见于辅助材料；「原件未找到」可能是格式改写，也可能是模型补全，建议人工核对。</div>
+      <table class="tracetable"><tbody>${rows}</tbody></table>`;
+  })() : "";
+
   const tools = Object.entries(rep.tools||{}).map(([k,v])=>{
     const n = (v.invoices||[]).length + (v.companies||[]).length + (v.history||[]).length;
     const c = v.status==="ok" ? "" : "warnbar";
@@ -436,6 +674,7 @@ function showReport(rep){
     <div class="op">${esc(rep.opinion)}</div>
     <h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">抽取字段与置信度</h3>
     <table class="fieldtable"><thead><tr><th>字段</th><th>合并值</th><th>置信度</th></tr></thead><tbody>${fields}</tbody></table>
+    ${traceBox}
     <h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">工具核验</h3>
     ${tools}
     <h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">人工复核</h3>
@@ -468,7 +707,19 @@ function showReport(rep){
   });
 }
 
-$("#runBtn").onclick = run;
+$("#runBtn").onclick = ()=>startAudit({});
+
+// 页签：进行中任务 / 全部单据
+function switchTab(t){
+  S.tab = t;
+  $("#tabTasks").classList.toggle("on", t==="tasks");
+  $("#tabCases").classList.toggle("on", t==="cases");
+  $("#taskPane").style.display = t==="tasks" ? "" : "none";
+  $("#casePane").style.display = t==="cases" ? "" : "none";
+  if(t==="tasks") loadTasks(); else loadCases();
+}
+$("#tabTasks").onclick = ()=>switchTab("tasks");
+$("#tabCases").onclick = ()=>switchTab("cases");
 boot().catch(e=>{ document.body.insertAdjacentHTML("afterbegin", `<div class="warnbar" style="margin:10px">界面初始化失败：${esc(e.message)}</div>`); });
 </script>
 </body>

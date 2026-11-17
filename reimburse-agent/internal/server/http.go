@@ -3,13 +3,16 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"time"
 
 	"reimburse/internal/audit"
 	"reimburse/internal/mcpauth"
 	"reimburse/internal/schema"
+	"reimburse/internal/task"
 	"reimburse/plugins/reimburse-audit/policy"
 )
 
@@ -36,6 +39,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/api/review/revoke", s.handleRevoke)
 	mux.HandleFunc("/api/reviews", s.handleReviews)
 	mux.HandleFunc("/api/quota", s.handleQuota)
+	mux.HandleFunc("/api/tasks", s.handleTasks)
+	mux.HandleFunc("/api/tasks/", s.handleTaskSub)
 	mux.HandleFunc("/api/people", s.handlePeople)
 	mux.HandleFunc("/api/meta", s.handleMeta)
 	mux.HandleFunc("/api/stats", s.handleStats)
@@ -43,8 +48,18 @@ func (s *Server) Routes() http.Handler {
 }
 
 // logRequests 记录每个请求，便于现场排查"点了没反应"。
+//
+// 同时兜底 recover：一个 handler 崩掉不应该让浏览器看到连接被重置
+// （那个现象极难排查——服务还活着，只是这个请求没了）。
+// 崩了就返回 500 并写清是哪个路径，让人知道该看哪里。
 func logRequests(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if v := recover(); v != nil {
+				log.Printf("panic %s %s: %v\n%s", r.Method, r.URL.Path, v, debug.Stack())
+				http.Error(w, "服务内部错误："+fmt.Sprint(v), 500)
+			}
+		}()
 		next.ServeHTTP(w, r)
 	})
 }
@@ -137,9 +152,36 @@ func (s *Server) handleAudit(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// 有任务库时，首次审核也建任务——否则"退回补材料"之后就没有下文了。
+	//
+	// 但同一张单据只应有一个任务。先找再建：否则重跑一次审核就多出一个任务，
+	// 待办列表里会出现同一张单的两三条记录，财务不知道点哪个。
+	var taskID string
+	if s.Tasks != nil {
+		// 不管上一个任务是什么状态都要复用：同一张报销单只有一个任务，
+		// 再次审核就是这张单的下一轮（终态的单再审，属于复核后重审）。
+		if exist, ok := s.Tasks.FindByCase(c.ID); ok {
+			taskID = exist.ID
+		} else {
+			tk, err := s.Tasks.Create(c.ID, c.Claim.ClaimNo, c.Claim.Applicant.EmployeeID)
+			if err != nil {
+				jsonOut(w, map[string]any{"error": err.Error()}, 400)
+				return
+			}
+			taskID = tk.ID
+		}
+	}
 	sess := s.Start(c, opt, req.Explain, req.Disabled)
 	sess.QuotaClient = quotaClient(r)
-	jsonOut(w, map[string]any{"session_id": sess.ID, "case_id": c.ID, "started": sess.Started}, 200)
+	if taskID != "" {
+		sess.TaskID = taskID
+		sess.OnFinish = func(rep *audit.Report) { s.applyReportToTask(taskID, rep, c) }
+	}
+	out := map[string]any{"session_id": sess.ID, "case_id": c.ID, "started": sess.Started}
+	if taskID != "" {
+		out["task_id"] = taskID
+	}
+	jsonOut(w, out, 200)
 }
 
 func (s *Server) handleAuditSub(w http.ResponseWriter, r *http.Request) {
@@ -309,9 +351,11 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, map[string]any{"error": err.Error()}, 400)
 		return
 	}
+	// 幂等命中时同样返回 200，另带 duplicate 标记：前端不必写额外分支。
 	jsonOut(w, map[string]any{
-		"ok":     true,
-		"review": saved,
+		"ok":        true,
+		"review":    saved,
+		"duplicate": saved.Duplicate,
 		// 明确告诉前端这条结论对查重库做了什么。
 		"impact": impactOf(saved),
 	}, 200)
@@ -403,6 +447,217 @@ func (s *Server) handleReviews(w http.ResponseWriter, r *http.Request) {
 	jsonOut(w, map[string]any{"reviews": s.Reviews()}, 200)
 }
 
+// handleTasks 是待办列表：财务最关心"今天有多少要处理、卡在谁那里"。
+//
+// 查询参数：
+//
+//	?state=need_manual  只看转人工的
+//	?waiting=1          只看在别处的（待补材料 / 待人工）
+func (s *Server) handleTasks(w http.ResponseWriter, r *http.Request) {
+	if s.Tasks == nil {
+		jsonOut(w, map[string]any{"enabled": false, "tasks": []any{}, "note": "未启用任务库"}, 200)
+		return
+	}
+	all := s.Tasks.List()
+	state := r.URL.Query().Get("state")
+	waitingOnly := r.URL.Query().Get("waiting") == "1"
+
+	var out []map[string]any
+	now := time.Now()
+	for _, t := range all {
+		if state != "" && string(t.State) != state {
+			continue
+		}
+		if waitingOnly && !(t.State == task.NeedMore || t.State == task.NeedManual) {
+			continue
+		}
+		out = append(out, taskBrief(t, now))
+	}
+	jsonOut(w, map[string]any{
+		"enabled": true, "tasks": out, "stats": s.Tasks.Stats(),
+		"note": "waiting_on 说明这张单现在卡在谁那里；waiting_days 是卡了几天",
+	}, 200)
+}
+
+// taskBrief 是列表项，只给必要字段。
+func taskBrief(t *task.Task, now time.Time) map[string]any {
+	out := map[string]any{
+		"id": t.ID, "case_id": t.CaseID, "claim_no": t.ClaimNo,
+		"state": t.State, "state_label": t.State.Label(),
+		"waiting_on": t.State.WaitingOn(), "waiting_days": t.WaitingDays(now),
+		"last_decision": t.LastDecision, "last_approved_fen": t.LastApprovedFen,
+		"rounds": len(t.Runs), "updated_at": t.UpdatedAt,
+	}
+	if n := len(t.Outstanding()); n > 0 {
+		out["outstanding"] = n
+		var labels []string
+		for _, m := range t.Outstanding() {
+			labels = append(labels, m.Label)
+		}
+		out["outstanding_labels"] = labels
+	}
+	return out
+}
+
+// handleTaskSub 处理 /api/tasks/{id} 与 /api/tasks/{id}/resubmit。
+func (s *Server) handleTaskSub(w http.ResponseWriter, r *http.Request) {
+	if s.Tasks == nil {
+		jsonOut(w, map[string]any{"error": "未启用任务库"}, 404)
+		return
+	}
+	rest := strings.TrimPrefix(r.URL.Path, "/api/tasks/")
+	parts := strings.SplitN(rest, "/", 2)
+	id := parts[0]
+
+	if len(parts) == 2 && parts[1] == "resubmit" {
+		s.handleResubmit(w, r, id)
+		return
+	}
+	if len(parts) == 2 && parts[1] == "reaudit" {
+		s.handleReaudit(w, r, id)
+		return
+	}
+	if r.Method != http.MethodGet {
+		jsonOut(w, map[string]any{"error": "只支持 GET"}, 405)
+		return
+	}
+	t, ok := s.Tasks.Get(id)
+	if !ok {
+		jsonOut(w, map[string]any{"error": "任务不存在: " + id}, 404)
+		return
+	}
+	jsonOut(w, map[string]any{"task": t, "waiting_on": t.State.WaitingOn()}, 200)
+}
+
+// resubmitRequest 是补交材料的请求体。
+type resubmitRequest struct {
+	Kind string `json:"kind"`
+	Name string `json:"name"`
+	Note string `json:"note"`
+	// Content 是补交材料的正文。首版用文本；真实场景应是 PDF/图片上传 + OCR。
+	// 必须有内容，否则"补交"只是登记，续审时判定不会变——那闭环就是假的。
+	Content    string `json:"content"`
+	EmployeeID string `json:"employee_id"`
+}
+
+// handleResubmit 登记补交。补交齐了任务回到"待审核"，等续审。
+func (s *Server) handleResubmit(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodPost {
+		jsonOut(w, map[string]any{"error": "只支持 POST"}, 405)
+		return
+	}
+	var req resubmitRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		jsonOut(w, map[string]any{"error": "请求体解析失败"}, 400)
+		return
+	}
+	by := identify(req.EmployeeID, r)
+	if strings.TrimSpace(req.Content) == "" {
+		jsonOut(w, map[string]any{
+			"error": "补交材料缺少正文（content）。只登记文件名而不给内容，续审时判定不会变化。",
+		}, 400)
+		return
+	}
+	t, dup, err := s.Tasks.ResubmitIdem(id, req.Kind, req.Name, by, req.Note, req.Content)
+	if err != nil {
+		jsonOut(w, map[string]any{"error": err.Error()}, 400)
+		return
+	}
+	out := map[string]any{
+		"ok": true, "task": t, "duplicate": dup,
+		"next": nextStep(t),
+	}
+	if dup {
+		out["note"] = "同一份材料已提交过，本次没有重复登记（版本不变）"
+	}
+	jsonOut(w, out, 200)
+}
+
+// handleReaudit 续审：对已补齐的任务再跑一次审核。
+//
+// 与首次审核的区别：会带上 recheck 计划，让事件流里能看出"哪些是复用的、哪些是重查的"。
+func (s *Server) handleReaudit(w http.ResponseWriter, r *http.Request, id string) {
+	if r.Method != http.MethodPost {
+		jsonOut(w, map[string]any{"error": "只支持 POST"}, 405)
+		return
+	}
+	t, ok := s.Tasks.Get(id)
+	if !ok {
+		jsonOut(w, map[string]any{"error": "任务不存在: " + id}, 404)
+		return
+	}
+	if t.State != task.Pending && t.State != task.NeedMore {
+		jsonOut(w, map[string]any{
+			"error": fmt.Sprintf("当前状态「%s」不能续审（只有待审核或待补材料可以）", t.State.Label()),
+		}, 400)
+		return
+	}
+	if !t.ResolvedAll() {
+		jsonOut(w, map[string]any{
+			"error":       "材料还没补齐，不能续审",
+			"outstanding": t.Outstanding(),
+		}, 400)
+		return
+	}
+	c, ok := s.Find(t.CaseID)
+	if !ok {
+		jsonOut(w, map[string]any{"error": "关联单据不存在: " + t.CaseID}, 404)
+		return
+	}
+	// 复用首次审核的配额与工具链路。
+	if s.Quota != nil {
+		st := s.Quota.Check(quotaClient(r))
+		if st.Blocked {
+			jsonOut(w, map[string]any{
+				"error": "本周 AI 用量已达上限，自动审核已熔断", "quota": st,
+				"action": "该单据需转人工处理",
+			}, 429)
+			return
+		}
+	}
+	sess := s.StartTask(c, t, audit.Options{Injected: map[string]audit.Status{}}, "", nil)
+	sess.QuotaClient = quotaClient(r)
+	jsonOut(w, map[string]any{
+		"session_id": sess.ID, "task_id": t.ID, "round": len(t.Runs) + 1,
+		"recheck": t.NextRecheck,
+	}, 200)
+}
+
+// nextStep 告诉调用方"接下来该做什么"。这是"能推动下一步"的直接体现。
+func nextStep(t *task.Task) map[string]any {
+	switch t.State {
+	case task.NeedMore:
+		var keys, labels []string
+		for _, m := range t.Outstanding() {
+			keys = append(keys, m.Key)
+			labels = append(labels, m.Label)
+		}
+		return map[string]any{
+			"action": "wait_for_employee",
+			"who":    "报销人",
+			"message": fmt.Sprintf("还需补交 %d 项：%s。补交后点「续审」重新审核，已核验的结果会复用。",
+				len(keys), strings.Join(labels, "、")),
+			"remaining": keys,
+		}
+	case task.Pending:
+		if len(t.Runs) > 0 {
+			return map[string]any{
+				"action": "reaudit", "who": "系统",
+				"message": "材料已补齐，可以续审。续审会复用以核验结果，只重查受影响的判定项。",
+			}
+		}
+		return map[string]any{"action": "audit", "who": "系统", "message": "尚未审核，可以开始审核。"}
+	case task.NeedManual:
+		return map[string]any{"action": "wait_for_finance", "who": "财务复核",
+			"message": "已转人工复核，等待财务确认。"}
+	case task.Approved:
+		return map[string]any{"action": "done", "who": "", "message": "初审通过，流程结束。"}
+	case task.Rejected:
+		return map[string]any{"action": "done", "who": "", "message": "已驳回，流程结束。"}
+	}
+	return map[string]any{"action": "none", "who": "", "message": "无后续动作。"}
+}
+
 // handleQuota 返回当前周用量。界面顶部与告警区用。
 func (s *Server) handleQuota(w http.ResponseWriter, r *http.Request) {
 	if s.Quota == nil {
@@ -466,6 +721,13 @@ func (s *Server) handleMeta(w http.ResponseWriter, r *http.Request) {
 		"tools": map[string]any{"mode": toolsMode(s.MCPURL), "url": s.MCPURL,
 			"names": []string{"verify_invoice", "check_company", "check_history"}},
 		"cases": len(s.Cases),
+		// 真实性分两件事，不能混为一谈：模型是不是真在跑，核验数据是不是真业务接口。
+		"provenance": map[string]any{
+			"model_live":   dsReady || clReady,
+			"tool_backend": "mock",
+			"invoice_docs": "synthetic",
+			"note":         "模型调用真实；票据为合成数据；三个核验工具读的是本地 mock 库，不是真实税局或工商接口",
+		},
 	}, 200)
 }
 

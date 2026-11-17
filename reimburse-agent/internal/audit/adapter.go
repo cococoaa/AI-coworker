@@ -120,8 +120,9 @@ func toJudgeFields(d *llm.DualResult) (judge.Fields, map[judge.FieldName]bool, [
 	return fs, un, low
 }
 
-// toJudgeClaim 把 schema.Claim 翻译成判定用的最小视图。
-func toJudgeClaim(c *schema.Claim) *judge.Claim {
+// ToJudgeClaim 把 schema.Claim 翻译成判定用的最小视图。
+// 导出是因为服务端算补件清单时也要用同一份翻译，避免两处口径不一致。
+func ToJudgeClaim(c *schema.Claim) *judge.Claim {
 	return &judge.Claim{
 		ClaimNo: c.ClaimNo, RequestNo: c.RequestNo,
 		Applicant: judge.Applicant{Name: c.Applicant.Name, EmployeeID: c.Applicant.EmployeeID, Grade: c.Applicant.Grade},

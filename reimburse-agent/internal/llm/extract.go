@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -31,7 +32,17 @@ var ExtractFields = []string{
 type FieldValue struct {
 	Value string  `json:"value"`
 	Conf  float64 `json:"confidence"`
+	// Presence 是这一栏在原件上的有无：present / absent / unreadable。
+	// 它把"原件没有"与"看不清"分开，二者都可能是空值但业务含义不同。
+	Presence string `json:"presence"`
 }
+
+// 原件有无情况的三个取值。
+const (
+	PresencePresent    = "present"
+	PresenceAbsent     = "absent"
+	PresenceUnreadable = "unreadable"
+)
 
 // Missing 表示该字段模型明确表示无法辨认。
 func (f FieldValue) Missing() bool { return f.Value == "" }
@@ -69,8 +80,17 @@ func extractSchema() map[string]any {
 				"type":        "number",
 				"description": "对该字段抽取正确的把握，0 到 1。原文清晰无误应接近 1；有任何遮挡、模糊、需推测应低于 0.8。",
 			},
+			"presence": map[string]any{
+				"type": "string",
+				"enum": []string{"present", "absent", "unreadable"},
+				"description": "这一栏在原件上的有无情况，必须明确回答：" +
+					"present=原件有这一栏且抄到了值；" +
+					"absent=原件确实没有这一栏或该栏为空白（这是发票本身的事实，不是识别失败）；" +
+					"unreadable=原件有这一栏但看不清、被遮挡或无法辨认。" +
+					"注意：absent 与 unreadable 都可能让你把 value 填成空字符串，但它们的业务含义完全不同，不要混用。",
+			},
 		},
-		"required":             []string{"value", "confidence"},
+		"required":             []string{"value", "confidence", "presence"},
 		"additionalProperties": false,
 	}
 	props := map[string]any{}
@@ -99,6 +119,9 @@ const extractSystem = `你是财务共享中心的票据录入员。任务是把
 3. 日期一律填成 YYYY-MM-DD，例如 "2026-10-01"。原文若为"2026年10月1日"，也转成该格式。
 4. 税号照抄 18 位，不要纠正大小写或补位。
 5. confidence 是你的真实把握：原文清晰为 1；有污损、遮挡、模糊，或需要结合上下文才能确定，必须低于 0.8。
+6. presence 必须明确回答这一栏在原件上的有无：present 有且抄到；absent 原件确实没有这一栏或该栏空白；unreadable 有这一栏但看不清。
+   区分 absent 与 unreadable 很重要：前者是发票本身的事实（后续按"缺失"处理），后者是识别失败（后续按"待补正"处理）。
+   若某栏在原件上确实留空，请 value 填空字符串、presence 填 absent，confidence 可以高；不要因为"结果是空"就压低置信度。
 6. 只输出 json，不要输出任何其他文字。输出格式示例：
 {"fields":{"invoice_no":{"value":"26123456789012345678","confidence":1},"issue_date":{"value":"2026-10-01","confidence":1},"total_amount":{"value":"553.00","confidence":1},"buyer_tax_id":{"value":"91310115MA1FL8X3K0","confidence":1},"seller_tax_id":{"value":"91310103692B6R5G35","confidence":1},"buyer_name":{"value":"星河科技有限公司","confidence":1},"seller_name":{"value":"东海铁路客运服务有限公司","confidence":1},"item_name":{"value":"*运输服务*铁路旅客运输","confidence":1}},"notes":""}`
 
@@ -134,6 +157,7 @@ type rawExtraction struct {
 	Fields map[string]struct {
 		Value      string   `json:"value"`
 		Confidence *float64 `json:"confidence"`
+		Presence   string   `json:"presence"`
 	} `json:"fields"`
 	Notes string `json:"notes"`
 }
@@ -166,7 +190,22 @@ func parseExtraction(text string) (*Extraction, *SchemaIssue) {
 		if conf < 0 || conf > 1 {
 			return nil, &SchemaIssue{Kind: ErrBadJSON, Detail: fmt.Sprintf("%s 的 confidence 越界: %v", f, conf)}
 		}
-		ex.Fields[f] = FieldValue{Value: v.Value, Conf: conf}
+		pres := strings.ToLower(strings.TrimSpace(v.Presence))
+		switch pres {
+		case PresencePresent, PresenceAbsent, PresenceUnreadable:
+		default:
+			// 模型没按枚举回答：按值推断，缺值就算看不清（保守）。
+			if v.Value == "" {
+				pres = PresenceUnreadable
+			} else {
+				pres = PresencePresent
+			}
+		}
+		// 值非空却声称 absent，属自相矛盾：以"有值"为准。
+		if pres == PresenceAbsent && v.Value != "" {
+			pres = PresencePresent
+		}
+		ex.Fields[f] = FieldValue{Value: v.Value, Conf: conf, Presence: pres}
 	}
 	return ex, nil
 }
@@ -280,14 +319,16 @@ func (d *DualResult) compare() {
 			if vb.Conf < conf {
 				conf = vb.Conf
 			}
-			d.Fields[f] = FieldValue{Value: na, Conf: conf}
+			// 两侧都比对通过后，presence 取更"悲观"的一方：
+			// 只要有一侧说看不清，就别声称"确认没有"。
+			d.Fields[f] = FieldValue{Value: na, Conf: conf, Presence: mergePresence(va.Presence, vb.Presence)}
 			if conf < LowThreshold {
 				d.LowConf = append(d.LowConf, f)
 			}
 		case d.A != nil:
-			d.Fields[f] = FieldValue{Value: normalizeValue(f, va.Value), Conf: va.Conf}
+			d.Fields[f] = FieldValue{Value: normalizeValue(f, va.Value), Conf: va.Conf, Presence: va.Presence}
 		case d.B != nil:
-			d.Fields[f] = FieldValue{Value: normalizeValue(f, vb.Value), Conf: vb.Conf}
+			d.Fields[f] = FieldValue{Value: normalizeValue(f, vb.Value), Conf: vb.Conf, Presence: vb.Presence}
 		default:
 			d.Fields[f] = FieldValue{}
 		}
@@ -311,4 +352,26 @@ func normalizeValue(field, v string) string {
 		return trimSpace(v)
 	}
 	return trimSpace(v)
+}
+
+// mergePresence 合并两侧的"原件有无"判断，取更保守的一方。
+//
+// 排序（从保守到确定）：unreadable > absent > present。
+// 只要有一侧说不清，就不能声称"确认原件没有"或"已读到"。
+func mergePresence(a, b string) string {
+	rank := func(p string) int {
+		switch p {
+		case PresenceUnreadable:
+			return 3
+		case PresenceAbsent:
+			return 2
+		case PresencePresent:
+			return 1
+		}
+		return 3 // 未知按最保守处理
+	}
+	if rank(a) >= rank(b) {
+		return a
+	}
+	return b
 }

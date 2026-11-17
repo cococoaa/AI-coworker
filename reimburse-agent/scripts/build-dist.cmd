@@ -29,6 +29,8 @@ copy /y "%ROOT%\mcp.example.json" "%OUT%\mcp.example.json" >nul
 copy /y "%ROOT%\README.md" "%OUT%\README.md" >nul
 copy /y "%ROOT%\docs\*.md" "%OUT%\docs\" >nul
 copy /y "%ROOT%\scripts\run-mcp-lan.cmd" "%OUT%\run-mcp-lan.cmd" >nul
+rem 人员名单必须一起打包：没有它，复核写入会被默认拒绝（刻意的默认拒绝，不是故障）。
+copy /y "%ROOT%\people.json" "%OUT%\people.json" >nul
 popd
 
 echo [4/4] smoke check

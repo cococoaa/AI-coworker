@@ -114,4 +114,7 @@ type Result struct {
 	Verified []string `json:"verified,omitempty"`
 	// Evidence 是判定过程中用到的原始数值，供意见核对金额时引用。
 	Evidence []string `json:"evidence,omitempty"`
+	// FieldStatus 是每个字段的四态：读到了 / 原件没有 / 看不清 / 两模型不一致。
+	// 这张表是"缺材料"与"看不清"分开建模的落点。
+	FieldStatus Statuses `json:"field_status,omitempty"`
 }
