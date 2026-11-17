@@ -25,7 +25,7 @@ const (
 	ToolCheckHistory  = "check_history"
 )
 
-// 工具返回状态。与 audit.ToolStatus 取值一致，便于直接映射。
+// 工具返回状态。与 audit.Status 取值一致，便于直接映射。
 const (
 	StatusOK      = "ok"
 	StatusFailed  = "failed"

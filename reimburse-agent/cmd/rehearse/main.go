@@ -16,7 +16,7 @@ import (
 
 	"reimburse/internal/llm"
 	"reimburse/internal/rehearsal"
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 func main() {
@@ -76,11 +76,11 @@ func main() {
 	}
 }
 
-func loadRules(p string) (*rules.File, error) {
+func loadRules(p string) (*policy.File, error) {
 	if p == "" {
-		return rules.Load()
+		return policy.Load()
 	}
-	return rules.LoadFile(p)
+	return policy.LoadFile(p)
 }
 
 func fatal(f string, a ...any) {

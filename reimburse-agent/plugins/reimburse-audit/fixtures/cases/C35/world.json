@@ -1,0 +1,22 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26117015168768411478",
+      "issue_date": "2026-10-06",
+      "total_fen": 47000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310103692B6R5G35",
+      "name": "东海铁路客运服务有限公司",
+      "city": "上海",
+      "status": "存续"
+    }
+  ],
+  "history": null,
+  "faults": null
+}

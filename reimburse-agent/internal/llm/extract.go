@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-// 抽取字段名。与 rules.json 中的 key_fields 对应，少一个都会导致对应规则不作判定。
+// 抽取字段名。与 policy.json 中的 key_fields 对应，少一个都会导致对应规则不作判定。
 const (
 	FInvoiceNo   = "invoice_no"
 	FIssueDate   = "issue_date"

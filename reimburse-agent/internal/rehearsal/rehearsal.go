@@ -21,7 +21,7 @@ import (
 	"reimburse/internal/llm"
 	"reimburse/internal/mcptools"
 	"reimburse/internal/schema"
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 // Case 是一次彩排的结果。
@@ -53,7 +53,7 @@ type Report struct {
 // Runner 持有彩排需要的公共依赖。
 type Runner struct {
 	Root string // 数据根目录（含 cases/）
-	RF   *rules.File
+	RF   *policy.File
 	Cfg  llm.Config
 	// Synth 为真时用合成抽取（无密钥环境）；否则走真实模型。
 	Synth bool
@@ -64,15 +64,15 @@ func (r *Runner) Run(ctx context.Context) *Report {
 	rep := &Report{At: time.Now(), AtText: time.Now().Format("2006-01-02 15:04:05")}
 	rep.Cases = append(rep.Cases,
 		r.runOne(ctx, "工具故障：发票查验超时", "查验超时属状态未知，必须转人工，不得当作查无此票驳回",
-			"C01", []string{rules.ManualReview}, nil,
-			map[string]audit.ToolStatus{"verify_invoice": audit.ToolTimeout}),
+			"C01", []string{policy.ManualReview}, nil,
+			map[string]audit.Status{"verify_invoice": audit.ToolTimeout}),
 		r.runOne(ctx, "模型超时：Claude 不可用", "只剩一个模型时关键字段无交叉校验，必须转人工",
-			"C01", []string{rules.ManualReview}, []string{"claude"}, nil),
+			"C01", []string{policy.ManualReview}, []string{"claude"}, nil),
 		r.runOne(ctx, "单模型不可用：关闭 DeepSeek", "同上，且要在事件流里看到被关闭的原因",
-			"C03", []string{rules.ManualReview}, []string{"deepseek"}, nil),
+			"C03", []string{policy.ManualReview}, []string{"deepseek"}, nil),
 		// 稳态对照：一切正常时必须按标准答案通过，证明故障场景的转人工不是"永远转人工"。
 		r.runOne(ctx, "对照：一切正常", "链路完好时应按标准答案自动通过",
-			"C01", []string{rules.Approve}, nil, nil),
+			"C01", []string{policy.Approve}, nil, nil),
 	)
 	for _, c := range rep.Cases {
 		if c.Passed {
@@ -85,7 +85,7 @@ func (r *Runner) Run(ctx context.Context) *Report {
 }
 
 func (r *Runner) runOne(ctx context.Context, name, purpose, caseID string, accept []string,
-	disabled []string, faults map[string]audit.ToolStatus) (result Case) {
+	disabled []string, faults map[string]audit.Status) (result Case) {
 
 	c := Case{Name: name, Purpose: purpose, CaseID: caseID, Want: accept}
 	t0 := time.Now()
@@ -127,7 +127,7 @@ func (r *Runner) runOne(ctx context.Context, name, purpose, caseID string, accep
 	_, remote := mcptools.InMemory(nil, srv)
 
 	opt := audit.Options{Injected: faults}
-	repOut := audit.New(r.RF).Run(ctx, &sc.Claim, sc.InvoiceText, sc.SupportText,
+	repOut := audit.Run(audit.New(r.RF), ctx, &sc.Claim, sc.InvoiceText, sc.SupportText,
 		audit.WrapMCP(remote), rv, opt)
 
 	c.Got = repOut.Result.Decision

@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110020",
+  "request_no": "SQ26100120",
+  "applicant": {
+    "name": "刘子豪",
+    "employee_id": "E1005",
+    "grade": "P"
+  },
+  "category": "transport",
+  "from_city": "上海",
+  "city": "厦门",
+  "start_date": "2026-10-01",
+  "end_date": "2026-10-03",
+  "purpose": "培训与技术支持",
+  "amount_fen": 42000,
+  "submit_date": "2026-10-09",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

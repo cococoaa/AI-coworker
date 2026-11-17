@@ -1,0 +1,52 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26464964258890883397",
+      "issue_date": "2026-09-23",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310108311WXRE501",
+      "status": "voided"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310108311WXRE501",
+      "name": "成都望岳酒店管理有限公司",
+      "city": "成都",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC52N1",
+      "invoice_no": "26331728209914491035",
+      "applicant_id": "E1005",
+      "seller_tax_id": "913101030RWTUEPQHN",
+      "issue_date": "2026-08-08",
+      "amount_fen": 171077,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-08-13"
+    },
+    {
+      "claim_no": "BHC52N2",
+      "invoice_no": "26117027331827742079",
+      "applicant_id": "E3001",
+      "seller_tax_id": "913101076NY9E6N25Y",
+      "issue_date": "2026-08-29",
+      "amount_fen": 183138,
+      "category": "meal",
+      "status": "rejected",
+      "submit_date": "2026-09-03"
+    }
+  ],
+  "faults": [
+    {
+      "tool": "verify_invoice",
+      "key": "26464964258890883397",
+      "mode": "garbled"
+    }
+  ]
+}

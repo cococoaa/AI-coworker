@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110056",
+  "request_no": "SQ26100156",
+  "applicant": {
+    "name": "刘子豪",
+    "employee_id": "E1005",
+    "grade": "P"
+  },
+  "category": "meal",
+  "city": "宁波",
+  "start_date": "2026-09-25",
+  "end_date": "2026-09-25",
+  "purpose": "部门周例会工作餐",
+  "amount_fen": 40000,
+  "submit_date": "2026-10-03",
+  "internal_count": 5,
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

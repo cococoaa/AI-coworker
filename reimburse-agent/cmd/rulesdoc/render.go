@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"strings"
 
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
-func render(rf *rules.File, byCheck map[string][]string, withCases bool) string {
+func render(rf *policy.File, byCheck map[string][]string, withCases bool) string {
 	var b strings.Builder
 	p := rf.Params
 	fmt.Fprintf(&b, "# %s\n\n版本：%s\n\n", rf.Policy.Name, rf.Policy.Version)
 	fmt.Fprintf(&b, "> **声明**：%s\n\n", rf.Policy.Disclaimer)
 	fmt.Fprintf(&b, "适用范围：%s\n\n", rf.Policy.Scope)
-	b.WriteString("本文件由 `go run ./cmd/rulesdoc` 从 `rules/rules.json` 生成，请改规则表而不是改本文件。\n\n")
+	b.WriteString("本文件由 `go run ./cmd/rulesdoc` 从 `rules/policy.json` 生成，请改规则表而不是改本文件。\n\n")
 
 	b.WriteString("## 一、判定原则\n\n")
 	for _, n := range rf.Policy.Notes {

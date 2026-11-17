@@ -10,7 +10,7 @@ import (
 	"reimburse/internal/schema"
 )
 
-// ResultStatus 与 audit.ToolStatus 取值一致。
+// ResultStatus 与 audit.Status 取值一致。
 type ResultStatus string
 
 const (

@@ -1,0 +1,40 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26496785110345060153",
+      "issue_date": "2026-10-05",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "9131011336J0E2TF0P",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "9131011336J0E2TF0P",
+      "name": "合肥安澜酒店管理有限公司",
+      "city": "合肥",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC54K1",
+      "invoice_no": "26496785110345060153",
+      "applicant_id": "E1002",
+      "seller_tax_id": "9131011336J0E2TF0P",
+      "issue_date": "2026-10-05",
+      "amount_fen": 72000,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-10-10"
+    }
+  ],
+  "faults": [
+    {
+      "tool": "check_history",
+      "key": "26496785110345060153",
+      "mode": "timeout"
+    }
+  ]
+}

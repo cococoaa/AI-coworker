@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110051",
+  "request_no": "SQ26100151",
+  "applicant": {
+    "name": "刘子豪",
+    "employee_id": "E1005",
+    "grade": "P"
+  },
+  "category": "transport",
+  "from_city": "上海",
+  "city": "成都",
+  "start_date": "2026-10-11",
+  "end_date": "2026-10-13",
+  "purpose": "项目验收与回访",
+  "amount_fen": 61000,
+  "submit_date": "2026-10-18",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

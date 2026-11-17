@@ -24,7 +24,7 @@ import (
 	"reimburse/internal/llm"
 	"reimburse/internal/mcpauth"
 	"reimburse/internal/server"
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 func main() {
@@ -241,11 +241,11 @@ func isLoopback(addr string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-func loadRules(p string) (*rules.File, error) {
+func loadRules(p string) (*policy.File, error) {
 	if p == "" {
-		return rules.Load()
+		return policy.Load()
 	}
-	return rules.LoadFile(p)
+	return policy.LoadFile(p)
 }
 
 var _ = fmt.Sprintf

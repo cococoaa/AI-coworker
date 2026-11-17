@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110003",
+  "request_no": "SQ26100103",
+  "applicant": {
+    "name": "王子轩",
+    "employee_id": "E1003",
+    "grade": "P"
+  },
+  "category": "lodging",
+  "from_city": "上海",
+  "city": "成都",
+  "start_date": "2026-09-30",
+  "end_date": "2026-10-02",
+  "purpose": "供应商现场评审",
+  "amount_fen": 76000,
+  "submit_date": "2026-10-12",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

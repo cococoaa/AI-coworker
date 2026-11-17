@@ -1,0 +1,63 @@
+{
+  "id": "C06",
+  "title": "12人招待3400元，达到审批线且已有事前审批号",
+  "tags": [
+    "meal",
+    "clean"
+  ],
+  "decision": "approve",
+  "hits": [],
+  "approved_fen": 340000,
+  "invoice": {
+    "invoice_no": "26400992317037169739",
+    "issue_date": "2026-10-20",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "合肥食尚汇餐饮管理有限公司",
+    "seller_tax_id": "91310109M3F9C00UE0",
+    "item_name": "*餐饮服务*餐费",
+    "tax_rate_pct": 6,
+    "ex_tax_fen": 320755,
+    "tax_fen": 19245,
+    "total_fen": 340000
+  },
+  "support": {
+    "kind": "consumption",
+    "date": "2026-10-20",
+    "city": "合肥",
+    "venue": "合肥食尚汇",
+    "lines": [
+      {
+        "name": "干锅花菜",
+        "qty": 2,
+        "amount_fen": 48571
+      },
+      {
+        "name": "饮料",
+        "qty": 2,
+        "amount_fen": 48571
+      },
+      {
+        "name": "果盘",
+        "qty": 2,
+        "amount_fen": 48571
+      },
+      {
+        "name": "宫保鸡丁",
+        "qty": 2,
+        "amount_fen": 80952
+      },
+      {
+        "name": "蒜蓉粉丝虾",
+        "qty": 2,
+        "amount_fen": 80952
+      },
+      {
+        "name": "米饭",
+        "qty": 1,
+        "amount_fen": 32383
+      }
+    ],
+    "total_fen": 340000
+  }
+}

@@ -13,7 +13,7 @@ import (
 
 	"reimburse/internal/audit"
 	"reimburse/internal/llm"
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 // 这些测试验证 HTTP 层：接口形状、SSE 事件流、演示开关、复核回写。
@@ -25,7 +25,7 @@ func testServer(t *testing.T) *Server {
 	if dir == "" {
 		dir = "../../data"
 	}
-	rf, err := rules.Load()
+	rf, err := policy.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +182,7 @@ func TestAuditSSE(t *testing.T) {
 		}
 	}
 	// 没有密钥时两个模型都失败，结论必须落在转人工，绝不能是通过。
-	if snap.Report.Result.Decision == rules.Approve {
+	if snap.Report.Result.Decision == policy.Approve {
 		t.Errorf("模型不可用时不得自动通过")
 	}
 	if !hasStr(snap.Report.Result.Hits, "R15-b") {
@@ -205,7 +205,7 @@ func TestAuditSwitches(t *testing.T) {
 	if r1.SessionID != "" {
 		// 服务端允许启动，但结果必须转人工；界面会拦掉这个组合，接口层也不应给出通过。
 		snap := waitReport(t, s, r1.SessionID)
-		if snap.Result.Decision == rules.Approve {
+		if snap.Result.Decision == policy.Approve {
 			t.Error("两个模型都关闭时不得通过")
 		}
 	}

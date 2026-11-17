@@ -1,6 +1,6 @@
-// rulesdoc 把规则表（rules.json）生成 Markdown 文档，文档与规则引擎、mock 生成器读同一份数据。
+// rulesdoc 把规则表（policy.json）生成 Markdown 文档，文档与规则引擎、mock 生成器读同一份数据。
 //
-//	go run ./cmd/rulesdoc                      写 docs/rules.md（内嵌规则表）
+//	go run ./cmd/rulesdoc                      写 docs/policy.md（内嵌规则表）
 //	go run ./cmd/rulesdoc -cases data          同时列出每个判定项对应的测试用例
 package main
 
@@ -12,31 +12,31 @@ import (
 	"strings"
 
 	"reimburse/internal/schema"
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 var outcomeName = map[string]string{
-	rules.Reject:       "驳回",
-	rules.ManualReview: "转人工",
-	rules.NeedMoreInfo: "退回补材料",
-	rules.ApproveAdj:   "调整后通过",
-	rules.Approve:      "通过",
+	policy.Reject:       "驳回",
+	policy.ManualReview: "转人工",
+	policy.NeedMoreInfo: "退回补材料",
+	policy.ApproveAdj:   "调整后通过",
+	policy.Approve:      "通过",
 }
 
 var catName = map[string]string{"transport": "交通", "lodging": "住宿", "meal": "餐饮招待"}
 
 func main() {
-	out := flag.String("out", "docs/rules.md", "输出文件")
+	out := flag.String("out", "docs/policy.md", "输出文件")
 	casesDir := flag.String("cases", "", "测试集根目录（含 cases/），给出则追加用例对照列")
 	rulesPath := flag.String("rules", "", "外部规则表路径，缺省使用内嵌规则表")
 	flag.Parse()
 
-	var rf *rules.File
+	var rf *policy.File
 	var err error
 	if *rulesPath != "" {
-		rf, err = rules.LoadFile(*rulesPath)
+		rf, err = policy.LoadFile(*rulesPath)
 	} else {
-		rf, err = rules.Load()
+		rf, err = policy.Load()
 	}
 	if err != nil {
 		fatal("读取规则表: %v", err)

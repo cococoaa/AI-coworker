@@ -1,0 +1,35 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26215575503802404516",
+      "issue_date": "2026-10-07",
+      "total_fen": 98000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101106FJ4NMP0UM",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "913101106FJ4NMP0UM",
+      "name": "云帆航空有限责任公司",
+      "city": "上海",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC30K1",
+      "invoice_no": "26241291496593128540",
+      "applicant_id": "E1002",
+      "seller_tax_id": "913101106FJ4NMP0UM",
+      "issue_date": "2026-10-07",
+      "amount_fen": 98000,
+      "category": "transport",
+      "transport_mode": "flight",
+      "status": "approved",
+      "submit_date": "2026-10-12"
+    }
+  ],
+  "faults": null
+}

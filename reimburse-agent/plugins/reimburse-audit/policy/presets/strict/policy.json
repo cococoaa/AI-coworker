@@ -1,0 +1,788 @@
+{
+  "plugin_version": "1.0.0",
+  "policy": {
+    "name": "星河科技有限公司差旅与费用报销管理办法（严控版·模拟）",
+    "version": "mock-1.0-strict",
+    "disclaimer": "本制度、公司主体、全部金额阈值、职级与城市分档均为黑客松演示虚构，不代表任何真实企业或监管口径。规则类别参考公开的差旅与报销合规文章，具体数值由本项目自行设定。",
+    "scope": "差旅（交通、住宿）与餐饮招待；仅处理增值税电子发票。付款、凭证记账、审批流、真实税局查验不在范围内。",
+    "notes": [
+      "全部规则逐条独立判定，命中项全部列出；最终结论按 params.decision_priority 取最严格者。",
+      "通过、驳回、转人工、退回补材料由规则代码判定，大模型只负责字段抽取和审核意见文字。",
+      "业务招待指有外部人员参加的餐饮；仅内部人员的餐饮按工作餐处理。",
+      "某字段不可信（置信度不足或两个模型抽取不一致）、所需凭证缺失或所需工具结果缺失时，依赖它的规则不作判定，由 R14 或 R15 兜底，避免用猜测值误驳回。",
+      "金额单位：规则表中的阈值为元，系统内部与数据文件中的金额一律为分（整数）。"
+    ]
+  },
+  "params": {
+    "company": {
+      "name": "星河科技有限公司",
+      "tax_id": "91310115MA1FL8X3K0"
+    },
+    "decision_priority": [
+      "reject",
+      "manual_review",
+      "need_more_info",
+      "approve_with_adjustment",
+      "approve"
+    ],
+    "reimburse_deadline_days": 15,
+    "transport_date_buffer_days": 0,
+    "low_confidence_threshold": 0.8,
+    "amount_tolerance_fen": 0,
+    "key_fields": [
+      "invoice_no",
+      "issue_date",
+      "total_amount",
+      "buyer_tax_id",
+      "seller_tax_id"
+    ],
+    "category_item_prefix": {
+      "transport": "*运输服务*",
+      "lodging": "*住宿服务*",
+      "meal": "*餐饮服务*"
+    },
+    "forbidden_keywords": [
+      "香烟",
+      "卷烟",
+      "烟草",
+      "白酒",
+      "啤酒",
+      "红酒",
+      "葡萄酒",
+      "洋酒",
+      "茅台",
+      "五粮液",
+      "礼品卡",
+      "购物卡",
+      "购物券",
+      "充值卡"
+    ],
+    "train_seats": {
+      "P": [
+        "二等座",
+        "硬座",
+        "硬卧"
+      ],
+      "M": [
+        "二等座",
+        "一等座",
+        "硬座",
+        "硬卧",
+        "软卧"
+      ],
+      "D": [
+        "二等座",
+        "一等座",
+        "硬座",
+        "硬卧",
+        "软卧"
+      ]
+    },
+    "flight_seats": {
+      "P": [
+        "经济舱"
+      ],
+      "M": [
+        "经济舱"
+      ],
+      "D": [
+        "经济舱",
+        "公务舱"
+      ]
+    },
+    "city_tiers": {
+      "tier1": [
+        "北京",
+        "上海",
+        "广州",
+        "深圳"
+      ],
+      "tier2": [
+        "杭州",
+        "南京",
+        "成都",
+        "武汉",
+        "西安",
+        "苏州",
+        "天津",
+        "重庆",
+        "长沙",
+        "郑州",
+        "青岛",
+        "厦门",
+        "宁波",
+        "合肥"
+      ]
+    },
+    "lodging_limit_yuan": {
+      "tier1": {
+        "P": 400,
+        "M": 600,
+        "D": 800
+      },
+      "tier2": {
+        "P": 320,
+        "M": 450,
+        "D": 600
+      },
+      "tier3": {
+        "P": 240,
+        "M": 320,
+        "D": 400
+      }
+    },
+    "meal_per_capita_yuan": {
+      "work_meal": 60,
+      "entertain": 200
+    },
+    "entertain_approval_line_yuan": 1000,
+    "split_window_days": 5,
+    "train_ticket_keyword": "铁路",
+    "field_deps": {
+      "invoice_no": [
+        "R01-a",
+        "R01-b",
+        "R01-c",
+        "R04-a"
+      ],
+      "issue_date": [
+        "R01-c",
+        "R04-b",
+        "R05-b"
+      ],
+      "total_amount": [
+        "R01-c",
+        "R04-b",
+        "R05-a",
+        "R05-b",
+        "R06-a",
+        "R06-b",
+        "R10-a",
+        "R11-a"
+      ],
+      "buyer_tax_id": [
+        "R02-b"
+      ],
+      "seller_tax_id": [
+        "R04-b",
+        "R05-b",
+        "R13-a",
+        "R13-b"
+      ]
+    },
+    "tool_deps": {
+      "verify_invoice": [
+        "R01-a",
+        "R01-b",
+        "R01-c"
+      ],
+      "check_company": [
+        "R13-a",
+        "R13-b"
+      ],
+      "check_history": [
+        "R04-a",
+        "R04-b",
+        "R05-b"
+      ]
+    }
+  },
+  "rules": [
+    {
+      "id": "R01",
+      "name": "发票真实性与状态",
+      "clause": "第2.1条",
+      "clause_text": "报销须提供真实、有效、未作废、未红冲的增值税电子发票，并须通过税务平台查验。",
+      "basis": [
+        "发票管理通行要求"
+      ],
+      "applies_to": [
+        "transport",
+        "lodging",
+        "meal"
+      ],
+      "tools": [
+        "verify_invoice"
+      ],
+      "checks": [
+        {
+          "id": "R01-a",
+          "when": "查验结果为作废或红字冲销",
+          "outcome": "reject",
+          "requires": {
+            "fields": [
+              "invoice_no"
+            ],
+            "tools": [
+              "verify_invoice"
+            ],
+            "support": []
+          }
+        },
+        {
+          "id": "R01-b",
+          "when": "查验结果为查无此票",
+          "outcome": "reject",
+          "requires": {
+            "fields": [
+              "invoice_no"
+            ],
+            "tools": [
+              "verify_invoice"
+            ],
+            "support": []
+          }
+        },
+        {
+          "id": "R01-c",
+          "when": "查验返回的开票日期或价税合计与抽取结果不一致（可能是伪造、篡改或抽取错误，不自动驳回）",
+          "outcome": "manual_review",
+          "requires": {
+            "fields": [
+              "invoice_no",
+              "issue_date",
+              "total_amount"
+            ],
+            "tools": [
+              "verify_invoice"
+            ],
+            "support": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "R02",
+      "name": "购买方抬头与税号",
+      "clause": "第2.2条",
+      "clause_text": "发票购买方名称与纳税人识别号须与公司开票信息完全一致，不得开具个人抬头。",
+      "basis": [
+        "发票管理通行要求",
+        "本公司制度（模拟）"
+      ],
+      "applies_to": [
+        "transport",
+        "lodging",
+        "meal"
+      ],
+      "tools": [],
+      "checks": [
+        {
+          "id": "R02-a",
+          "when": "购买方名称与公司全称不一致（含个人、旧名称、简称）",
+          "outcome": "reject",
+          "requires": {
+            "fields": [],
+            "tools": [],
+            "support": []
+          }
+        },
+        {
+          "id": "R02-b",
+          "when": "购买方纳税人识别号缺失、与公司不一致，或位数、校验位不合法",
+          "outcome": "reject",
+          "requires": {
+            "fields": [
+              "buyer_tax_id"
+            ],
+            "tools": [],
+            "support": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "R03",
+      "name": "发票内容与报销类别匹配",
+      "clause": "第2.3条",
+      "clause_text": "发票项目须与报销类别相符；不得报销香烟、酒类、礼品卡、购物卡等禁止项目。",
+      "basis": [
+        "内控报销通行做法",
+        "本公司制度（模拟）"
+      ],
+      "applies_to": [
+        "transport",
+        "lodging",
+        "meal"
+      ],
+      "tools": [],
+      "checks": [
+        {
+          "id": "R03-a",
+          "when": "发票项目名称的税收分类大类与报销类别不匹配（交通*运输服务*，住宿*住宿服务*，餐饮*餐饮服务*）",
+          "outcome": "reject",
+          "requires": {
+            "fields": [],
+            "tools": [],
+            "support": []
+          }
+        },
+        {
+          "id": "R03-b",
+          "when": "发票项目名称或消费清单含禁止关键词（params.forbidden_keywords）",
+          "outcome": "reject",
+          "requires": {
+            "fields": [],
+            "tools": [],
+            "support": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "R04",
+      "name": "重复报销",
+      "clause": "第2.4条",
+      "clause_text": "同一张发票不得重复报销；疑似重复须人工确认。",
+      "basis": [
+        "内控报销通行做法"
+      ],
+      "applies_to": [
+        "transport",
+        "lodging",
+        "meal"
+      ],
+      "tools": [
+        "check_history"
+      ],
+      "checks": [
+        {
+          "id": "R04-a",
+          "when": "历史库已有相同发票号码，且状态为已通过或审核中",
+          "outcome": "reject",
+          "requires": {
+            "fields": [
+              "invoice_no"
+            ],
+            "tools": [
+              "check_history"
+            ],
+            "support": []
+          }
+        },
+        {
+          "id": "R04-b",
+          "when": "非火车票：同一申请人、同一销售方、同开票日期、同金额，但发票号码不同，且该历史记录未被驳回（本单为火车票时往返同日同额属正常，不适用）",
+          "outcome": "manual_review",
+          "requires": {
+            "fields": [
+              "issue_date",
+              "seller_tax_id",
+              "total_amount"
+            ],
+            "tools": [
+              "check_history"
+            ],
+            "support": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "R05",
+      "name": "招待审批线与拆分报销",
+      "clause": "第4.2条",
+      "clause_text": "单笔业务招待（有外部人员参加）费用达到审批线须有事前审批号；不得将同一事项拆分为多笔以规避审批线。",
+      "basis": [
+        "内控报销通行做法",
+        "本公司制度（模拟）"
+      ],
+      "applies_to": [
+        "meal"
+      ],
+      "tools": [
+        "check_history"
+      ],
+      "checks": [
+        {
+          "id": "R05-a",
+          "when": "业务招待（外部人员大于0）单笔价税合计达到审批线（含等于），且申请单无事前审批号",
+          "outcome": "need_more_info",
+          "requires": {
+            "fields": [
+              "total_amount"
+            ],
+            "tools": [],
+            "support": []
+          }
+        },
+        {
+          "id": "R05-b",
+          "when": "业务招待：历史库中同一申请人、同一销售方、餐饮类、未被驳回、开票日期与本单相差不超过 split_window_days 天（相差 0 天即同日也算）的单据，与本单的金额合计达到审批线，而本单与这些历史单据的价税合计均低于审批线",
+          "outcome": "manual_review",
+          "requires": {
+            "fields": [
+              "issue_date",
+              "seller_tax_id",
+              "total_amount"
+            ],
+            "tools": [
+              "check_history"
+            ],
+            "support": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "R06",
+      "name": "金额三方一致",
+      "clause": "第2.5条",
+      "clause_text": "申请金额不得高于发票价税合计；发票价税合计须与行程单、水单或消费清单合计一致。",
+      "basis": [
+        "内控报销通行做法"
+      ],
+      "applies_to": [
+        "transport",
+        "lodging",
+        "meal"
+      ],
+      "tools": [],
+      "checks": [
+        {
+          "id": "R06-a",
+          "when": "申请金额大于发票价税合计",
+          "outcome": "reject",
+          "requires": {
+            "fields": [
+              "total_amount"
+            ],
+            "tools": [],
+            "support": []
+          }
+        },
+        {
+          "id": "R06-b",
+          "when": "发票价税合计与行程单、水单或消费清单合计不等（容差 amount_tolerance_fen）",
+          "outcome": "manual_review",
+          "requires": {
+            "fields": [
+              "total_amount"
+            ],
+            "tools": [],
+            "support": [
+              "total"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "R07",
+      "name": "报销时效",
+      "clause": "第2.6条",
+      "clause_text": "出差或招待结束后30日内提交报销，超期须补充说明。",
+      "basis": [
+        "内控报销通行做法",
+        "本公司制度（模拟）"
+      ],
+      "applies_to": [
+        "transport",
+        "lodging",
+        "meal"
+      ],
+      "tools": [],
+      "checks": [
+        {
+          "id": "R07-a",
+          "when": "提交日期减申请单结束日期大于 reimburse_deadline_days 天（恰好等于不算超期）",
+          "outcome": "need_more_info",
+          "requires": {
+            "fields": [],
+            "tools": [],
+            "support": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "R08",
+      "name": "费用日期与行程吻合",
+      "clause": "第3.1条",
+      "clause_text": "费用发生日期须在申请单所列出差或招待期间内。",
+      "basis": [
+        "内控报销通行做法"
+      ],
+      "applies_to": [
+        "transport",
+        "lodging",
+        "meal"
+      ],
+      "tools": [],
+      "checks": [
+        {
+          "id": "R08-a",
+          "when": "费用发生日期（乘车日、入住与离店日、用餐日）不在申请单期间内；交通允许前后各 transport_date_buffer_days 天，住宿与餐饮不留缓冲",
+          "outcome": "manual_review",
+          "requires": {
+            "fields": [],
+            "tools": [],
+            "support": [
+              "check_in",
+              "check_out",
+              "date"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "R09",
+      "name": "交通席别标准",
+      "clause": "第3.2条",
+      "clause_text": "火车、飞机席别须符合职级标准；超标须事前特批。",
+      "basis": [
+        "内控报销通行做法",
+        "本公司制度（模拟）"
+      ],
+      "applies_to": [
+        "transport"
+      ],
+      "tools": [],
+      "checks": [
+        {
+          "id": "R09-a",
+          "when": "席别不在该职级允许范围，且申请单无特批编号",
+          "outcome": "need_more_info",
+          "requires": {
+            "fields": [],
+            "tools": [],
+            "support": [
+              "mode",
+              "seat"
+            ]
+          }
+        },
+        {
+          "id": "R09-b",
+          "when": "席别不在该职级允许范围，但申请单填有特批编号（编号真伪本系统不核实，须人工确认）",
+          "outcome": "manual_review",
+          "requires": {
+            "fields": [],
+            "tools": [],
+            "support": [
+              "mode",
+              "seat"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "R10",
+      "name": "住宿分城市限额",
+      "clause": "第3.3条",
+      "clause_text": "住宿费按城市等级与职级设夜均限额，超标部分自理。",
+      "basis": [
+        "内控报销通行做法",
+        "本公司制度（模拟）"
+      ],
+      "applies_to": [
+        "lodging"
+      ],
+      "tools": [],
+      "checks": [
+        {
+          "id": "R10-a",
+          "when": "夜均房价（发票价税合计除以水单晚数）大于限额（等于限额不算超标）",
+          "outcome": "approve_with_adjustment",
+          "adjust": "核准金额 = 夜均限额 × 晚数，不超过申请金额",
+          "requires": {
+            "fields": [
+              "total_amount"
+            ],
+            "tools": [],
+            "support": [
+              "nights"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "R11",
+      "name": "餐饮人均标准",
+      "clause": "第4.1条",
+      "clause_text": "工作餐人均不超过100元，业务招待人均不超过300元，超标部分自理。",
+      "basis": [
+        "内控报销通行做法",
+        "本公司制度（模拟）"
+      ],
+      "applies_to": [
+        "meal"
+      ],
+      "tools": [],
+      "checks": [
+        {
+          "id": "R11-a",
+          "when": "人均（发票价税合计除以内外部总人数）大于上限（等于上限不算超标；有外部人员按招待标准，否则按工作餐标准）",
+          "outcome": "approve_with_adjustment",
+          "adjust": "核准金额 = 人均上限 × 总人数，不超过申请金额",
+          "requires": {
+            "fields": [
+              "total_amount"
+            ],
+            "tools": [],
+            "support": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "R12",
+      "name": "乘车人与入住人须为本人",
+      "clause": "第3.4条",
+      "clause_text": "行程单上的乘车人、水单上的入住人须为申请人本人。",
+      "basis": [
+        "内控报销通行做法"
+      ],
+      "applies_to": [
+        "transport",
+        "lodging"
+      ],
+      "tools": [],
+      "checks": [
+        {
+          "id": "R12-a",
+          "when": "行程单乘车人或水单入住人姓名与申请人不一致（可能是代订，不自动驳回）",
+          "outcome": "manual_review",
+          "requires": {
+            "fields": [],
+            "tools": [],
+            "support": [
+              "person"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "R13",
+      "name": "销售方企业状态",
+      "clause": "第2.8条",
+      "clause_text": "发票销售方须为存续状态的企业；注销、吊销的不得报销，经营异常的须人工确认。",
+      "basis": [
+        "发票管理通行要求",
+        "内控报销通行做法"
+      ],
+      "applies_to": [
+        "transport",
+        "lodging",
+        "meal"
+      ],
+      "tools": [
+        "check_company"
+      ],
+      "checks": [
+        {
+          "id": "R13-a",
+          "when": "销售方登记状态为注销或吊销",
+          "outcome": "reject",
+          "requires": {
+            "fields": [
+              "seller_tax_id"
+            ],
+            "tools": [
+              "check_company"
+            ],
+            "support": []
+          }
+        },
+        {
+          "id": "R13-b",
+          "when": "销售方登记状态为经营异常",
+          "outcome": "manual_review",
+          "requires": {
+            "fields": [
+              "seller_tax_id"
+            ],
+            "tools": [
+              "check_company"
+            ],
+            "support": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "R14",
+      "name": "凭证完整性",
+      "clause": "第2.7条",
+      "clause_text": "须提交发票、对应的行程单、水单或消费清单以及申请单号；餐饮须填写事由和人数，业务招待还须填写招待对象单位。",
+      "basis": [
+        "内控报销通行做法"
+      ],
+      "applies_to": [
+        "transport",
+        "lodging",
+        "meal"
+      ],
+      "tools": [],
+      "checks": [
+        {
+          "id": "R14-a",
+          "when": "缺少对应类别的佐证凭证（交通缺行程单，住宿缺水单，餐饮缺消费清单）",
+          "outcome": "need_more_info",
+          "requires": {
+            "fields": [],
+            "tools": [],
+            "support": []
+          }
+        },
+        {
+          "id": "R14-b",
+          "when": "缺少申请单号；或餐饮缺少事由、总人数；或有外部人员的餐饮缺少招待对象单位",
+          "outcome": "need_more_info",
+          "requires": {
+            "fields": [],
+            "tools": [],
+            "support": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "R15",
+      "name": "核验失败与低置信度",
+      "clause": "第2.9条",
+      "clause_text": "无法完成核验的单据不得自动通过，须标记「未核验」并转人工复核。",
+      "basis": [
+        "内控报销通行做法",
+        "本系统责任边界设计"
+      ],
+      "note": "字段不可信时，依赖该字段的其他规则不作判定，只由本条转人工。",
+      "applies_to": [
+        "transport",
+        "lodging",
+        "meal"
+      ],
+      "tools": [
+        "verify_invoice",
+        "check_company",
+        "check_history"
+      ],
+      "checks": [
+        {
+          "id": "R15-a",
+          "when": "任一外部工具调用失败、超时或返回异常（超时视为状态未知，不当作失败或通过）",
+          "outcome": "manual_review",
+          "requires": {
+            "fields": [],
+            "tools": [],
+            "support": []
+          }
+        },
+        {
+          "id": "R15-b",
+          "when": "关键字段（params.key_fields）任一置信度低于 low_confidence_threshold，或两个模型对关键字段抽取结果不一致",
+          "outcome": "manual_review",
+          "requires": {
+            "fields": [],
+            "tools": [],
+            "support": []
+          }
+        }
+      ]
+    }
+  ]
+}

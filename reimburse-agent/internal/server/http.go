@@ -104,7 +104,7 @@ func (s *Server) handleAudit(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, map[string]any{"error": "用例不存在: " + req.CaseID}, 404)
 		return
 	}
-	opt := audit.Options{Injected: map[string]audit.ToolStatus{}}
+	opt := audit.Options{Injected: map[string]audit.Status{}}
 	for _, f := range req.Faults {
 		switch f.Mode {
 		case "timeout":

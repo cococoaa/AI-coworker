@@ -1,0 +1,22 @@
+{
+  "claim_no": "BX26110046",
+  "request_no": "SQ26100146",
+  "applicant": {
+    "name": "吴静怡",
+    "employee_id": "E2002",
+    "grade": "M"
+  },
+  "category": "meal",
+  "city": "武汉",
+  "start_date": "2026-10-13",
+  "end_date": "2026-10-13",
+  "purpose": "接待合作方项目评审",
+  "amount_fen": 100000,
+  "submit_date": "2026-10-21",
+  "internal_count": 2,
+  "external_count": 2,
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

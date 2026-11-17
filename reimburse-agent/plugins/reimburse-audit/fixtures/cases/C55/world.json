@@ -1,0 +1,47 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26171801667222176003",
+      "issue_date": "2026-10-30",
+      "total_fen": 180000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101183UDT49JM99",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "913101183UDT49JM99",
+      "name": "深圳锦程酒店管理有限公司",
+      "city": "深圳",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC55N1",
+      "invoice_no": "26236899704329738845",
+      "applicant_id": "E1005",
+      "seller_tax_id": "91310103G89CTRGDQR",
+      "issue_date": "2026-09-22",
+      "amount_fen": 114965,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-09-27"
+    },
+    {
+      "claim_no": "BHC55N2",
+      "invoice_no": "26421366104142186213",
+      "applicant_id": "E3002",
+      "seller_tax_id": "913101058D8EGE4WBB",
+      "issue_date": "2026-10-10",
+      "amount_fen": 177363,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-10-15"
+    }
+  ],
+  "faults": null
+}

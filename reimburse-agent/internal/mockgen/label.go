@@ -4,13 +4,13 @@ import (
 	"strings"
 
 	"reimburse/internal/schema"
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 // Label 根据结构化真值独立推出命中的判定项、最终结论和核准金额。
 // 它只读 Claim、Truth.Invoice、Truth.Support 和 World，不读渲染后的文本，
 // 因此与日后"从文本抽取字段再判定"的规则引擎互为独立实现，可以互相印证。
-func Label(rf *rules.File, c *schema.Case) (hits []string, decision string, approved int64) {
+func Label(rf *policy.File, c *schema.Case) (hits []string, decision string, approved int64) {
 	p := &rf.Params
 	cl, inv, sp, w := &c.Claim, &c.Truth.Invoice, c.Truth.Support, &c.World
 
@@ -58,7 +58,7 @@ func Label(rf *rules.File, c *schema.Case) (hits []string, decision string, appr
 
 	// R02 购买方
 	add("R02-a", inv.BuyerName != p.Company.Name)
-	add("R02-b", inv.BuyerTaxID == "" || inv.BuyerTaxID != p.Company.TaxID || !rules.ValidTaxID(inv.BuyerTaxID))
+	add("R02-b", inv.BuyerTaxID == "" || inv.BuyerTaxID != p.Company.TaxID || !policy.ValidTaxID(inv.BuyerTaxID))
 
 	// R03 内容与类别
 	add("R03-a", !strings.HasPrefix(inv.ItemName, p.CategoryItemPrefix[cl.Category]))
@@ -82,7 +82,7 @@ func Label(rf *rules.File, c *schema.Case) (hits []string, decision string, appr
 
 	// R05 招待审批线与拆分
 	line := p.ApprovalLineFen()
-	entertain := cl.Category == rules.CatMeal && cl.ExternalCount > 0
+	entertain := cl.Category == policy.CatMeal && cl.ExternalCount > 0
 	add("R05-a", entertain && inv.TotalFen >= line && cl.EntertainApprovalNo == "")
 	if entertain && inv.TotalFen < line {
 		sum, allBelow, related := inv.TotalFen, true, 0
@@ -91,7 +91,7 @@ func Label(rf *rules.File, c *schema.Case) (hits []string, decision string, appr
 			if d < 0 {
 				d = -d
 			}
-			if h.ApplicantID == cl.Applicant.EmployeeID && h.SellerTaxID == inv.SellerTaxID && h.Category == rules.CatMeal &&
+			if h.ApplicantID == cl.Applicant.EmployeeID && h.SellerTaxID == inv.SellerTaxID && h.Category == policy.CatMeal &&
 				h.Status != schema.HistRejected && h.InvoiceNo != inv.InvoiceNo && d <= p.SplitWindowDays {
 				sum += h.AmountFen
 				related++
@@ -115,31 +115,31 @@ func Label(rf *rules.File, c *schema.Case) (hits []string, decision string, appr
 	// R08 日期吻合
 	if sp != nil {
 		switch cl.Category {
-		case rules.CatTransport:
+		case policy.CatTransport:
 			add("R08-a", sp.Date < addDays(cl.StartDate, -p.TransportDateBufferDays) || sp.Date > addDays(cl.EndDate, p.TransportDateBufferDays))
-		case rules.CatLodging:
+		case policy.CatLodging:
 			add("R08-a", sp.CheckIn < cl.StartDate || sp.CheckOut > cl.EndDate || sp.CheckIn > sp.CheckOut)
-		case rules.CatMeal:
+		case policy.CatMeal:
 			add("R08-a", sp.Date < cl.StartDate || sp.Date > cl.EndDate)
 		}
 	}
 
 	// R09 席别
-	if cl.Category == rules.CatTransport && sp != nil && !p.SeatAllowed(sp.Mode, cl.Applicant.Grade, sp.Seat) {
+	if cl.Category == policy.CatTransport && sp != nil && !p.SeatAllowed(sp.Mode, cl.Applicant.Grade, sp.Seat) {
 		add("R09-a", cl.SpecialApprovalNo == "")
 		add("R09-b", cl.SpecialApprovalNo != "")
 	}
 
 	// R10 住宿限额、R11 餐饮人均
 	var caps []int64
-	if cl.Category == rules.CatLodging && sp != nil && sp.Nights > 0 {
+	if cl.Category == policy.CatLodging && sp != nil && sp.Nights > 0 {
 		capFen := p.LodgingLimitFen(cl.City, cl.Applicant.Grade) * int64(sp.Nights)
 		if inv.TotalFen > capFen {
 			add("R10-a", true)
 			caps = append(caps, capFen)
 		}
 	}
-	if cl.Category == rules.CatMeal {
+	if cl.Category == policy.CatMeal {
 		if n := int64(cl.InternalCount + cl.ExternalCount); n > 0 {
 			capFen := p.MealCapFen(cl.ExternalCount > 0) * n
 			if inv.TotalFen > capFen {
@@ -150,7 +150,7 @@ func Label(rf *rules.File, c *schema.Case) (hits []string, decision string, appr
 	}
 
 	// R12 本人
-	if sp != nil && (cl.Category == rules.CatTransport || cl.Category == rules.CatLodging) {
+	if sp != nil && (cl.Category == policy.CatTransport || cl.Category == policy.CatLodging) {
 		add("R12-a", sp.Person != cl.Applicant.Name)
 	}
 
@@ -165,7 +165,7 @@ func Label(rf *rules.File, c *schema.Case) (hits []string, decision string, appr
 	// R14 凭证完整性
 	add("R14-a", sp == nil)
 	missing := cl.RequestNo == ""
-	if cl.Category == rules.CatMeal {
+	if cl.Category == policy.CatMeal {
 		missing = missing || cl.Purpose == "" || cl.InternalCount+cl.ExternalCount == 0 || (cl.ExternalCount > 0 && cl.ExternalOrg == "")
 	}
 	add("R14-b", missing)
@@ -185,9 +185,9 @@ func Label(rf *rules.File, c *schema.Case) (hits []string, decision string, appr
 	}
 	decision = rf.Aggregate(hits)
 	switch decision {
-	case rules.Approve:
+	case policy.Approve:
 		approved = cl.AmountFen
-	case rules.ApproveAdj:
+	case policy.ApproveAdj:
 		approved = cl.AmountFen
 		for _, cp := range caps {
 			approved = min64(approved, cp)

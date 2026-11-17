@@ -22,7 +22,7 @@ import (
 	"reimburse/internal/llm"
 	"reimburse/internal/mcpauth"
 	"reimburse/internal/schema"
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 func main() {
@@ -96,7 +96,7 @@ func main() {
 	for _, d := range splitList(*disable) {
 		rv.Disabled[d] = true
 	}
-	opt := audit.Options{Explain: *explain, Injected: map[string]audit.ToolStatus{}}
+	opt := audit.Options{Explain: *explain, Injected: map[string]audit.Status{}}
 	for _, f := range splitList(*fault) {
 		parts := strings.SplitN(f, "=", 2)
 		if len(parts) != 2 {
@@ -154,7 +154,7 @@ func main() {
 		}
 	}
 	opt.OnEvent = onEvent
-	rep := eng.Run(ctx, claim, invoiceText, supportText, ex, rv, opt)
+	rep := audit.Run(eng, ctx, claim, invoiceText, supportText, ex, rv, opt)
 
 	if *out != "" {
 		if err := schema.WriteJSON(*out, rep); err != nil {
@@ -201,15 +201,15 @@ func yuan(fen int64) string {
 
 func outcomeCN(o string) string {
 	switch o {
-	case rules.Approve:
+	case policy.Approve:
 		return "通过"
-	case rules.ApproveAdj:
+	case policy.ApproveAdj:
 		return "调整后通过"
-	case rules.Reject:
+	case policy.Reject:
 		return "驳回"
-	case rules.ManualReview:
+	case policy.ManualReview:
 		return "转人工复核"
-	case rules.NeedMoreInfo:
+	case policy.NeedMoreInfo:
 		return "退回补材料"
 	}
 	return o
@@ -225,11 +225,11 @@ func splitList(s string) []string {
 	return out
 }
 
-func loadRules(path string) (*rules.File, error) {
+func loadRules(path string) (*policy.File, error) {
 	if path == "" {
-		return rules.Load()
+		return policy.Load()
 	}
-	return rules.LoadFile(path)
+	return policy.LoadFile(path)
 }
 
 func fatal(format string, a ...any) {

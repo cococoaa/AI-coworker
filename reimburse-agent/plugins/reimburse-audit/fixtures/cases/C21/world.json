@@ -1,0 +1,22 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26456087985691745012",
+      "issue_date": "2026-10-23",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310100NUBD0NR0RJ",
+      "status": "red_reversed"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310100NUBD0NR0RJ",
+      "name": "厦门安澜酒店管理有限公司",
+      "city": "厦门",
+      "status": "存续"
+    }
+  ],
+  "history": null,
+  "faults": null
+}

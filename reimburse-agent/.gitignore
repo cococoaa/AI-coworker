@@ -1,0 +1,5 @@
+plugins_check.out
+
+# 临时脚本
+make_presets.py
+fix_*.py

@@ -1,0 +1,22 @@
+{
+  "claim_no": "BX26110038",
+  "request_no": "SQ26100138",
+  "applicant": {
+    "name": "赵雅琪",
+    "employee_id": "E1004",
+    "grade": "P"
+  },
+  "category": "transport",
+  "from_city": "上海",
+  "city": "西安",
+  "start_date": "2026-10-13",
+  "end_date": "2026-10-15",
+  "purpose": "参加行业技术交流会",
+  "amount_fen": 92000,
+  "submit_date": "2026-10-25",
+  "special_approval_no": "TB2610021",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

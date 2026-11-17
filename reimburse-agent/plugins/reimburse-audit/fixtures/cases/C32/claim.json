@@ -1,0 +1,23 @@
+{
+  "claim_no": "BX26110032",
+  "request_no": "SQ26100132",
+  "applicant": {
+    "name": "郑浩然",
+    "employee_id": "E2003",
+    "grade": "M"
+  },
+  "category": "meal",
+  "city": "宁波",
+  "start_date": "2026-10-27",
+  "end_date": "2026-10-27",
+  "purpose": "接待供应商技术交流",
+  "amount_fen": 150000,
+  "submit_date": "2026-11-03",
+  "internal_count": 3,
+  "external_count": 3,
+  "external_org": "汇通物流集团有限公司",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

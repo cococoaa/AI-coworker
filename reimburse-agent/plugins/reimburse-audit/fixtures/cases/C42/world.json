@@ -1,0 +1,34 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26323820565074735369",
+      "issue_date": "2026-09-24",
+      "total_fen": 24000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310109383FE6UXLU",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310109383FE6UXLU",
+      "name": "鸿运来餐饮服务有限公司",
+      "city": "长沙",
+      "status": "注销"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC42N1",
+      "invoice_no": "26299678830489480217",
+      "applicant_id": "E2002",
+      "seller_tax_id": "913101086TLUC4TTCD",
+      "issue_date": "2026-08-31",
+      "amount_fen": 91803,
+      "category": "lodging",
+      "status": "rejected",
+      "submit_date": "2026-09-05"
+    }
+  ],
+  "faults": null
+}

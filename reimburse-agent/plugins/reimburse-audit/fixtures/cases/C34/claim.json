@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110034",
+  "request_no": "SQ26100134",
+  "applicant": {
+    "name": "王子轩",
+    "employee_id": "E1003",
+    "grade": "P"
+  },
+  "category": "transport",
+  "from_city": "上海",
+  "city": "宁波",
+  "start_date": "2026-10-21",
+  "end_date": "2026-10-23",
+  "purpose": "供应商现场评审",
+  "amount_fen": 55300,
+  "submit_date": "2026-11-01",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

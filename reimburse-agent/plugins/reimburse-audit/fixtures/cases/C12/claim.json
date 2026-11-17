@@ -1,0 +1,23 @@
+{
+  "claim_no": "BX26110012",
+  "request_no": "SQ26100112",
+  "applicant": {
+    "name": "周明辉",
+    "employee_id": "E2001",
+    "grade": "M"
+  },
+  "category": "meal",
+  "city": "厦门",
+  "start_date": "2026-10-01",
+  "end_date": "2026-10-01",
+  "purpose": "接待合作方项目评审",
+  "amount_fen": 199999,
+  "submit_date": "2026-10-06",
+  "internal_count": 4,
+  "external_count": 4,
+  "external_org": "启明医疗科技有限公司",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

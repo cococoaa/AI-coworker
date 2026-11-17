@@ -1,0 +1,60 @@
+{
+  "id": "C53",
+  "title": "销售方实为注销，但企业核验报错，转人工",
+  "tags": [
+    "meal",
+    "fault"
+  ],
+  "decision": "manual_review",
+  "hits": [
+    "R15-a"
+  ],
+  "approved_fen": 0,
+  "invoice": {
+    "invoice_no": "26226848865404883141",
+    "issue_date": "2026-10-15",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "金禾源餐饮服务有限公司",
+    "seller_tax_id": "913101038BWKNWE1F0",
+    "item_name": "*餐饮服务*餐费",
+    "tax_rate_pct": 6,
+    "ex_tax_fen": 33962,
+    "tax_fen": 2038,
+    "total_fen": 36000
+  },
+  "support": {
+    "kind": "consumption",
+    "date": "2026-10-15",
+    "city": "南京",
+    "venue": "南京江南小馆",
+    "lines": [
+      {
+        "name": "宫保鸡丁",
+        "qty": 1,
+        "amount_fen": 4000
+      },
+      {
+        "name": "农家小炒肉",
+        "qty": 1,
+        "amount_fen": 4000
+      },
+      {
+        "name": "清蒸鲈鱼",
+        "qty": 2,
+        "amount_fen": 20000
+      },
+      {
+        "name": "红烧鲫鱼",
+        "qty": 1,
+        "amount_fen": 4000
+      },
+      {
+        "name": "酸辣汤",
+        "qty": 2,
+        "amount_fen": 4000
+      }
+    ],
+    "total_fen": 36000
+  }
+}

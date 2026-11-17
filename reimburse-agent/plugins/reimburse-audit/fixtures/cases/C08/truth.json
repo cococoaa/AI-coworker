@@ -1,0 +1,43 @@
+{
+  "id": "C08",
+  "title": "一线城市普通员工夜均超限额1分，按限额核准",
+  "tags": [
+    "lodging",
+    "boundary"
+  ],
+  "decision": "approve_with_adjustment",
+  "hits": [
+    "R10-a"
+  ],
+  "approved_fen": 50000,
+  "invoice": {
+    "invoice_no": "26385707484295593027",
+    "issue_date": "2026-09-24",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "深圳安澜酒店管理有限公司",
+    "seller_tax_id": "913101081DG7C6WKMU",
+    "item_name": "*住宿服务*住宿费",
+    "tax_rate_pct": 6,
+    "ex_tax_fen": 47171,
+    "tax_fen": 2830,
+    "total_fen": 50001
+  },
+  "support": {
+    "kind": "folio",
+    "person": "林晓雯",
+    "hotel": "安澜酒店(深圳中心店)",
+    "city": "深圳",
+    "check_in": "2026-09-23",
+    "check_out": "2026-09-24",
+    "nights": 1,
+    "lines": [
+      {
+        "date": "2026-09-23",
+        "name": "房费",
+        "amount_fen": 50001
+      }
+    ],
+    "total_fen": 50001
+  }
+}

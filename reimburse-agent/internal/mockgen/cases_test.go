@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 const testSeed = 20261121
 
-func load(t *testing.T) *rules.File {
+func load(t *testing.T) *policy.File {
 	t.Helper()
-	rf, err := rules.Load()
+	rf, err := policy.Load()
 	if err != nil {
 		t.Fatal(err)
 	}

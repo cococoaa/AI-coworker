@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110052",
+  "request_no": "SQ26100152",
+  "applicant": {
+    "name": "赵雅琪",
+    "employee_id": "E1004",
+    "grade": "P"
+  },
+  "category": "lodging",
+  "from_city": "上海",
+  "city": "成都",
+  "start_date": "2026-09-21",
+  "end_date": "2026-09-23",
+  "purpose": "项目验收与回访",
+  "amount_fen": 72000,
+  "submit_date": "2026-09-27",
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

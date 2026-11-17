@@ -21,7 +21,7 @@ import (
 	"reimburse/internal/audit"
 	"reimburse/internal/llm"
 	"reimburse/internal/schema"
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 // CaseIndex 是一条用例的摘要，供界面列表使用。
@@ -53,7 +53,7 @@ type Session struct {
 type Server struct {
 	Root  string // 数据根目录（含 cases/）
 	Cases []*schema.Case
-	RF    *rules.File
+	RF    *policy.File
 	Cfg   llm.Config
 	// MCPURL 为空表示进程内起 MCP 服务；否则连远程服务。
 	MCPURL string
@@ -87,7 +87,7 @@ type ReviewOutcome struct {
 }
 
 // New 创建服务。
-func New(root string, rf *rules.File, cfg llm.Config) (*Server, error) {
+func New(root string, rf *policy.File, cfg llm.Config) (*Server, error) {
 	cases, err := schema.LoadAll(root)
 	if err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func (s *Server) Start(c *schema.Case, opt audit.Options, explain string, disabl
 		opt.Explain = explain
 		opt.OnEvent = sess.publish
 		eng := audit.New(s.RF)
-		rep := eng.Run(ctx, &c.Claim, c.InvoiceText, c.SupportText, ex, rv, opt)
+		rep := audit.Run(eng, ctx, &c.Claim, c.InvoiceText, c.SupportText, ex, rv, opt)
 		sess.finish(rep)
 	}()
 	return sess
@@ -240,7 +240,7 @@ func (s *Server) AddReview(r ReviewOutcome) {
 		return
 	}
 	status := schema.HistRejected
-	if r.Decision == rules.Approve || r.Decision == rules.ApproveAdj {
+	if r.Decision == policy.Approve || r.Decision == policy.ApproveAdj {
 		status = schema.HistApproved
 	}
 	s.extraHistory = append(s.extraHistory, schema.HistRecord{

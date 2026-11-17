@@ -1,0 +1,45 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26429250844050945276",
+      "issue_date": "2026-10-21",
+      "total_fen": 72000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101029UWL8NE8H6",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "913101029UWL8NE8H6",
+      "name": "长沙云舍酒店管理有限公司",
+      "city": "长沙",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC25N1",
+      "invoice_no": "26323846294800468682",
+      "applicant_id": "E2003",
+      "seller_tax_id": "91310116R1JK5Y9B9F",
+      "issue_date": "2026-09-26",
+      "amount_fen": 149862,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-10-01"
+    },
+    {
+      "claim_no": "BHC25N2",
+      "invoice_no": "26155538219903305163",
+      "applicant_id": "E2002",
+      "seller_tax_id": "91310119KNFY8R2PT8",
+      "issue_date": "2026-10-04",
+      "amount_fen": 40206,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-10-09"
+    }
+  ],
+  "faults": null
+}

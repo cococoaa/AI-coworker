@@ -1,0 +1,44 @@
+{
+  "id": "C24",
+  "title": "个人抬头，无购买方税号",
+  "tags": [
+    "transport",
+    "violation"
+  ],
+  "decision": "reject",
+  "hits": [
+    "R02-a",
+    "R02-b"
+  ],
+  "approved_fen": 0,
+  "invoice": {
+    "invoice_no": "26436658179840797545",
+    "issue_date": "2026-10-01",
+    "buyer_name": "林晓雯",
+    "buyer_tax_id": "",
+    "seller_name": "东海铁路客运服务有限公司",
+    "seller_tax_id": "91310103692B6R5G35",
+    "item_name": "*运输服务*铁路旅客运输",
+    "tax_rate_pct": 9,
+    "ex_tax_fen": 28440,
+    "tax_fen": 2560,
+    "total_fen": 31000
+  },
+  "support": {
+    "kind": "itinerary",
+    "mode": "train",
+    "person": "林晓雯",
+    "date": "2026-10-01",
+    "vehicle": "G4389",
+    "from": "上海",
+    "to": "杭州",
+    "seat": "二等座",
+    "lines": [
+      {
+        "name": "票价",
+        "amount_fen": 31000
+      }
+    ],
+    "total_fen": 31000
+  }
+}

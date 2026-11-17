@@ -12,7 +12,8 @@ import (
 
 	"reimburse/internal/llm"
 	"reimburse/internal/schema"
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/judge"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 // 编排层：把一次审核拆成可观测的阶段，并保证任何一处失败都落在"转人工"上，不落在"通过"上。
@@ -43,9 +44,9 @@ type Step struct {
 
 // Plan 返回本次审核的步骤清单。它由规则表推导，而不是写死：
 // 哪几条规则要调哪个工具，就从规则表的 tools 字段取。
-func (e *Engine) Plan(cat string) []Step {
+func Plan(rf *policy.File, cat string) []Step {
 	tools := map[string][]string{}
-	for _, r := range e.RF.Rules {
+	for _, r := range rf.Rules {
 		if !appliesTo(r, cat) {
 			continue
 		}
@@ -61,22 +62,22 @@ func (e *Engine) Plan(cat string) []Step {
 		}
 	}
 	ruleCount := 0
-	for _, r := range e.RF.Rules {
+	for _, r := range rf.Rules {
 		if appliesTo(r, cat) {
 			ruleCount++
 		}
 	}
 	return []Step{
-		{StagePlan, "确定检查范围", fmt.Sprintf("%s类共 %d 条规则适用，需调用 %d 个外部工具", categoryCN(cat), ruleCount, len(toolParts))},
+		{StagePlan, "确定检查范围", fmt.Sprintf("%s类共 %d 条规则适用，需调用 %d 个外部工具", judgeCategoryCN(cat), ruleCount, len(toolParts))},
 		{StageExtract, "双模型抽取发票字段", "DeepSeek 与 Claude 各自独立抽取，逐字段比对；不一致或置信度低于 " +
-			fmt.Sprintf("%.2f", e.RF.Params.LowConfidenceThreshold) + " 的字段标为不可信"},
+			fmt.Sprintf("%.2f", rf.Params.LowConfidenceThreshold) + " 的字段标为不可信"},
 		{StageTools, "核验外部事实", strings.Join(toolParts, "；")},
 		{StageAggregate, "执行规则判定", "按规则表逐条判定，命中项全部列出，结论取最严格者"},
 		{StageExplain, "生成审核意见", "由规则结果驱动，条款编号与金额在生成后回查核对"},
 	}
 }
 
-func appliesTo(r rules.Rule, cat string) bool {
+func appliesTo(r policy.Rule, cat string) bool {
 	for _, c := range r.AppliesTo {
 		if c == cat {
 			return true
@@ -97,26 +98,6 @@ func toolLabel(t string) string {
 	return t
 }
 
-// Explorer 是 MCP 工具层的接口（实现见 internal/mcptools）。
-type Explorer interface {
-	VerifyInvoice(ctx context.Context, invoiceNo string) ToolResult
-	CheckCompany(ctx context.Context, taxID string) ToolResult
-	CheckHistory(ctx context.Context, q HistoryQuery) ToolResult
-}
-
-// HistoryQuery 是查重条件。按规则 R04/R05 所需的最少字段传，不做全表扫描。
-type HistoryQuery struct {
-	InvoiceNo   string
-	ApplicantID string
-	SellerTaxID string
-	IssueDate   string
-}
-
-// LLM 是编排层对模型层的最小依赖，便于测试替换。
-type LLM interface {
-	ExtractWith(ctx context.Context, provider string, src llm.Source, onCall func(*llm.Response)) (*llm.Extraction, *llm.SchemaIssue)
-}
-
 // Reviewer 是运行期开关：某个模型被关掉时模拟"不可用"，用于现场演示降级路径。
 type Reviewer struct {
 	LLM      LLM
@@ -131,7 +112,7 @@ type Reviewer struct {
 	Recorded []string
 	// ToolFaults 是演示开关：模拟某个 MCP 工具故障，用于现场演示"工具挂了会怎样"。
 	// 真实故障由 MCP 服务自己产生，这里与真实故障等价，两者可叠加。
-	ToolFaults map[string]ToolStatus
+	ToolFaults map[string]Status
 }
 
 // Emitter 接收事件。事件是审核过程的唯一真相来源：界面、日志、回放都从它渲染。
@@ -151,16 +132,16 @@ type Event struct {
 
 // Report 是一次审核的完整结果。
 type Report struct {
-	ClaimNo        string                `json:"claim_no"`
-	ClaimAmountFen int64                 `json:"claim_amount_fen"`
-	Plan           []Step                `json:"plan"`
-	Extract        *llm.DualResult       `json:"extract"`
-	Tools          map[string]ToolResult `json:"tools"`
-	Result         *Result               `json:"result"`
-	Opinion        string                `json:"opinion"`
-	Events         []Event               `json:"events"`
-	CostUSD        float64               `json:"cost_usd"`
-	ElapsedMS      int64                 `json:"elapsed_ms"`
+	ClaimNo        string                 `json:"claim_no"`
+	ClaimAmountFen int64                  `json:"claim_amount_fen"`
+	Plan           []Step                 `json:"plan"`
+	Extract        *llm.DualResult        `json:"extract"`
+	Tools          map[string]ToolOutcome `json:"tools"`
+	Result         *Result                `json:"result"`
+	Opinion        string                 `json:"opinion"`
+	Events         []Event                `json:"events"`
+	CostUSD        float64                `json:"cost_usd"`
+	ElapsedMS      int64                  `json:"elapsed_ms"`
 	// Warnings 是降级说明，例如只有一边模型可用、工具超时。
 	Warnings []string `json:"warnings"`
 }
@@ -168,7 +149,7 @@ type Report struct {
 // Options 控制一次审核的行为。
 type Options struct {
 	// Injected 是演示用的故障注入：工具名 -> 状态。真实故障由工具层自己产生，二者可叠加。
-	Injected map[string]ToolStatus
+	Injected map[string]Status
 	// Explain 用哪个模型写审核意见；空表示不生成，界面直接用规则依据拼接。
 	Explain string
 	// OnEvent 为空时只收集事件不回调。
@@ -176,12 +157,12 @@ type Options struct {
 }
 
 // Run 执行一次完整审核。
-func (e *Engine) Run(ctx context.Context, cl *schema.Claim, invoiceText, supportText string, ex Explorer, rv *Reviewer, opt Options) *Report {
+func Run(e *Engine, ctx context.Context, cl *schema.Claim, invoiceText, supportText string, ex Explorer, rv *Reviewer, opt Options) *Report {
 	start := time.Now()
 	// 演示开关与命令行的故障注入合并；显式注入优先。
 	if rv != nil && len(rv.ToolFaults) > 0 {
 		if opt.Injected == nil {
-			opt.Injected = map[string]ToolStatus{}
+			opt.Injected = map[string]Status{}
 		}
 		for k, v := range rv.ToolFaults {
 			if _, ok := opt.Injected[k]; !ok {
@@ -189,7 +170,7 @@ func (e *Engine) Run(ctx context.Context, cl *schema.Claim, invoiceText, support
 			}
 		}
 	}
-	rep := &Report{ClaimNo: cl.ClaimNo, ClaimAmountFen: cl.AmountFen, Tools: map[string]ToolResult{}, Plan: e.Plan(cl.Category)}
+	rep := &Report{ClaimNo: cl.ClaimNo, ClaimAmountFen: cl.AmountFen, Tools: map[string]ToolOutcome{}, Plan: Plan(e.RF, cl.Category)}
 	// 事件序号在并发抽取时由多个 goroutine 产生，用原子计数保证唯一，最终按产生顺序排序。
 	var seq int64
 	emit := func(stage Stage, kind, title, detail string, data any, d time.Duration) {
@@ -206,7 +187,7 @@ func (e *Engine) Run(ctx context.Context, cl *schema.Claim, invoiceText, support
 
 	// 1. 双模型抽取
 	src := llm.Source{Category: cl.Category, InvoiceText: invoiceText, SupportText: supportText}
-	dual := e.dualExtract(ctx, src, rv, func(provider string, phase string, resp *llm.Response, issue *llm.SchemaIssue, d time.Duration) {
+	dual := dualExtract(e, ctx, src, rv, func(provider string, phase string, resp *llm.Response, issue *llm.SchemaIssue, d time.Duration) {
 		switch phase {
 		case "start":
 			emit(StageExtract, "llm_call", providerName(provider)+" 开始抽取", "", nil, 0)
@@ -245,7 +226,7 @@ func (e *Engine) Run(ctx context.Context, cl *schema.Claim, invoiceText, support
 		case contains(dual.LowConf, f):
 			state = "置信度不足，标红转人工"
 		}
-		emit(StageExtract, "llm_result", "字段 "+fieldCN(f),
+		emit(StageExtract, "llm_result", "字段 "+judgeFieldCN(judge.FieldName(f)),
 			fmt.Sprintf("合并值「%s」置信度 %.2f，%s", v.Value, v.Conf, state), v, 0)
 	}
 	for _, n := range []string{"A", "B"} {
@@ -261,49 +242,51 @@ func (e *Engine) Run(ctx context.Context, cl *schema.Claim, invoiceText, support
 		rep.Warnings = append(rep.Warnings, dual.Degraded+"，关键字段缺少交叉校验，按未核验转人工")
 		// 单模型可用时，把"没有交叉校验"显式传给规则层：
 		// 两个模型都成功时，不一致的字段已经通过 Untrusted 表达了。
-		dual.LowConf = appendUnique(dual.LowConf, LowConfidenceNoCrossCheck)
+		dual.LowConf = append(dual.LowConf, LowConfidenceNoCrossCheck)
 	}
 
 	// 2. 工具核验。只对可信且非空的键调用，避免拿猜的值去查库。
-	tools := map[string]ToolResult{}
-	callTool := func(name string, fn func() ToolResult) ToolResult {
-		if st, ok := opt.Injected[name]; ok && st != ToolSkipped {
-			emit(StageTools, "tool_call", toolLabel(name)+" 被注入"+toolCN(st), "演示用故障注入", nil, 0)
+	tools := map[string]ToolOutcome{}
+	callTool := func(name string, fn func() ToolOutcome) ToolOutcome {
+		if st, ok := opt.Injected[name]; ok && st != Failed {
+			emit(StageTools, "tool_call", toolLabel(name)+" 被注入"+judgeToolCN(st), "演示用故障注入", nil, 0)
 		}
 		t0 := time.Now()
 		emit(StageTools, "tool_call", "调用 "+name, "", nil, 0)
 		tr := fn()
 		tr = inject(tr, opt.Injected[name])
-		emit(StageTools, "tool_result", toolLabel(name)+" 返回 "+toolCN(tr.Status), toolSummary(tr), tr, time.Since(t0))
-		if tr.Status != ToolOK {
-			rep.Warnings = append(rep.Warnings, toolLabel(name)+" "+toolCN(tr.Status)+"，相关判定项不作判定")
+		emit(StageTools, "tool_result", toolLabel(name)+" 返回 "+judgeToolCN(tr.Status.Status), toolSummary(tr), tr, time.Since(t0))
+		if !tr.Status.Status.Usable() {
+			rep.Warnings = append(rep.Warnings, toolLabel(name)+" "+judgeToolCN(tr.Status.Status)+"，相关判定项不作判定")
 		}
 		return tr
 	}
 	invNo := dual.Fields[llm.FInvoiceNo]
 	sellerTax := dual.Fields[llm.FSellerTaxID]
 	if invNo.Value != "" && !contains(dual.Untrusted, llm.FInvoiceNo) && invNo.Conf >= e.RF.Params.LowConfidenceThreshold {
-		tools["verify_invoice"] = callTool("verify_invoice", func() ToolResult { return ex.VerifyInvoice(ctx, invNo.Value) })
+		tools["verify_invoice"] = callTool("verify_invoice", func() ToolOutcome { return ex.VerifyInvoice(ctx, invNo.Value) })
 		// 查重按规则需要的最少条件：发票号 + 申请人 + 销售方 + 开票日期。
-		tools["check_history"] = callTool("check_history", func() ToolResult {
+		tools["check_history"] = callTool("check_history", func() ToolOutcome {
 			return ex.CheckHistory(ctx, HistoryQuery{
 				InvoiceNo: invNo.Value, ApplicantID: cl.Applicant.EmployeeID,
 				SellerTaxID: sellerTax.Value, IssueDate: dual.Fields[llm.FIssueDate].Value,
 			})
 		})
 	} else {
-		tools["verify_invoice"] = ToolResult{Status: ToolSkipped, Detail: "发票号不可信，无从查验"}
-		tools["check_history"] = ToolResult{Status: ToolSkipped, Detail: "发票号不可信，无从查重"}
+		tools["verify_invoice"] = ToolOutcome{Status: judge.Verdict{Status: Failed, Reason: "发票号不可信，无从查验"}}
+		tools["check_history"] = ToolOutcome{Status: judge.Verdict{Status: Failed, Reason: "发票号不可信，无从查重"}}
 	}
 	if sellerTax.Value != "" && !contains(dual.Untrusted, llm.FSellerTaxID) && sellerTax.Conf >= e.RF.Params.LowConfidenceThreshold {
-		tools["check_company"] = callTool("check_company", func() ToolResult { return ex.CheckCompany(ctx, sellerTax.Value) })
+		tools["check_company"] = callTool("check_company", func() ToolOutcome { return ex.CheckCompany(ctx, sellerTax.Value) })
 	} else {
-		tools["check_company"] = ToolResult{Status: ToolSkipped, Detail: "销售方税号不可信，无从核验"}
+		tools["check_company"] = ToolOutcome{Status: judge.Verdict{Status: Failed, Reason: "销售方税号不可信，无从核验"}}
 	}
 	rep.Tools = tools
 
 	// 3. 规则判定
-	in := &Input{Claim: cl, Fields: dual.Fields, Untrusted: dual.Untrusted, LowConfidence: dual.LowConf,
+	// 把宿主类型翻译成插件要求的类型（见 adapter.go）。
+	fields, untrusted, low := toJudgeFields(dual)
+	in := &Input{Claim: toJudgeClaim(cl), Fields: fields, Untrusted: untrusted, LowConfidence: low,
 		SupportText: supportText, Tools: tools}
 	res := e.Judge(in)
 	rep.Result = res
@@ -324,7 +307,7 @@ func (e *Engine) Run(ctx context.Context, cl *schema.Claim, invoiceText, support
 	// 4. 审核意见：先从规则结果生成确定性文本，能写清就不必调模型。
 	rep.Opinion = composeOpinion(cl, res, e.RF)
 	if opt.Explain != "" && rv != nil && rv.LLM != nil {
-		text, issue := e.explain(ctx, cl, res, rep.Opinion, rv, opt.Explain, func(s string) {
+		text, issue := explain(e, ctx, cl, res, rep.Opinion, rv, opt.Explain, func(s string) {
 			emit(StageExplain, "llm_call", "生成审核意见", s, nil, 0)
 		})
 		if issue == nil {
@@ -346,7 +329,7 @@ func (e *Engine) Run(ctx context.Context, cl *schema.Claim, invoiceText, support
 }
 
 // dualExtract 在 Reviewer 允许的模型范围内做双抽取；被关闭的模型按失败处理。
-func (e *Engine) dualExtract(ctx context.Context, src llm.Source, rv *Reviewer, cb func(string, string, *llm.Response, *llm.SchemaIssue, time.Duration)) *llm.DualResult {
+func dualExtract(e *Engine, ctx context.Context, src llm.Source, rv *Reviewer, cb func(string, string, *llm.Response, *llm.SchemaIssue, time.Duration)) *llm.DualResult {
 	out := &llm.DualResult{Fields: map[string]llm.FieldValue{}}
 	names := []string{llm.ProviderDeepSeek, llm.ProviderClaude}
 	type res struct {
@@ -400,11 +383,11 @@ func (e *Engine) dualExtract(ctx context.Context, src llm.Source, rv *Reviewer, 
 	return out
 }
 
-func inject(tr ToolResult, st ToolStatus) ToolResult {
-	if st == "" || st == ToolOK {
+func inject(tr ToolOutcome, st Status) ToolOutcome {
+	if st == 0 || st.Usable() {
 		return tr
 	}
-	return ToolResult{Status: st, Detail: "演示注入的" + toolCN(st)}
+	return ToolOutcome{Status: judge.Verdict{Status: st, Reason: "演示注入的" + judgeToolCN(st)}}
 }
 
 func providerName(p string) string {
@@ -416,15 +399,15 @@ func providerName(p string) string {
 
 func outcomeCN(o string) string {
 	switch o {
-	case rules.Approve:
+	case policy.Approve:
 		return "通过"
-	case rules.ApproveAdj:
+	case policy.ApproveAdj:
 		return "调整后通过"
-	case rules.Reject:
+	case policy.Reject:
 		return "驳回"
-	case rules.ManualReview:
+	case policy.ManualReview:
 		return "转人工复核"
-	case rules.NeedMoreInfo:
+	case policy.NeedMoreInfo:
 		return "退回补材料"
 	}
 	return o
@@ -442,9 +425,9 @@ func truncate(s string, n int) string {
 	return string(rs[:n]) + "…"
 }
 
-func toolSummary(tr ToolResult) string {
-	switch tr.Status {
-	case ToolOK:
+func toolSummary(tr ToolOutcome) string {
+	switch tr.Status.Status {
+	case Found:
 		var parts []string
 		if n := len(tr.Invoices); n > 0 {
 			parts = append(parts, fmt.Sprintf("%d 条发票登记", n))
@@ -460,14 +443,14 @@ func toolSummary(tr ToolResult) string {
 		}
 		return strings.Join(parts, "，")
 	}
-	return tr.Detail
+	return tr.Status.Reason
 }
 
 // composeOpinion 从规则结果生成确定性审核意见。金额与条款编号都直接取自规则表和本次判定，
 // 不经过模型改写，因此不会出现"文字里的金额和判决不一致"。
-func composeOpinion(cl *schema.Claim, res *Result, rf *rules.File) string {
+func composeOpinion(cl *schema.Claim, res *Result, rf *policy.File) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "单据 %s（%s，%s，申请 %s）：结论为「%s」。", cl.ClaimNo, categoryCN(cl.Category), cl.Applicant.Name,
+	fmt.Fprintf(&b, "单据 %s（%s，%s，申请 %s）：结论为「%s」。", cl.ClaimNo, judgeCategoryCN(cl.Category), cl.Applicant.Name,
 		fen(cl.AmountFen), outcomeCN(res.Decision))
 	if len(res.Findings) == 0 {
 		b.WriteString("全部适用规则均未命中，金额与凭证一致，可直接通过。")
@@ -478,15 +461,15 @@ func composeOpinion(cl *schema.Claim, res *Result, rf *rules.File) string {
 		}
 	}
 	switch res.Decision {
-	case rules.Approve:
+	case policy.Approve:
 		fmt.Fprintf(&b, "\n\n核准金额 %s。", fen(res.ApprovedFen))
-	case rules.ApproveAdj:
+	case policy.ApproveAdj:
 		fmt.Fprintf(&b, "\n\n核准金额 %s（按标准上限调整，超出部分自理）。", fen(res.ApprovedFen))
-	case rules.NeedMoreInfo:
+	case policy.NeedMoreInfo:
 		b.WriteString("\n\n请补充上述材料后重新提交。")
-	case rules.ManualReview:
+	case policy.ManualReview:
 		b.WriteString("\n\n已转人工复核，本系统不自动放行。")
-	case rules.Reject:
+	case policy.Reject:
 		b.WriteString("\n\n不符合报销规定，予以驳回。")
 	}
 	if len(res.Skipped) > 0 {
@@ -536,7 +519,7 @@ var opinionSchema = map[string]any{
 // explain 生成润色后的审核意见，并在生成后做一次机器核对：
 // 意见里出现的每个金额都必须能在规则结果中找到，出现的每个判定项编号都必须真实命中。
 // 核对不过就丢弃模型文本，用确定性草稿——宁可文字生硬，也不让文字和判决对不上。
-func (e *Engine) explain(ctx context.Context, cl *schema.Claim, res *Result, draft string, rv *Reviewer, provider string, onStart func(string)) (string, *llm.SchemaIssue) {
+func explain(e *Engine, ctx context.Context, cl *schema.Claim, res *Result, draft string, rv *Reviewer, provider string, onStart func(string)) (string, *llm.SchemaIssue) {
 	onStart("提交规则结论，要求不改动金额与条款")
 	resp := rv.Client.Call(ctx, provider, &llm.Request{
 		System:   explainSystem,
@@ -556,7 +539,7 @@ func (e *Engine) explain(ctx context.Context, cl *schema.Claim, res *Result, dra
 	if err := json.Unmarshal(b, &out); err != nil || strings.TrimSpace(out.Opinion) == "" {
 		return "", &llm.SchemaIssue{Kind: llm.ErrBadJSON, Detail: "opinion 字段缺失或为空"}
 	}
-	if why := e.verifyOpinion(res, out.Opinion); why != "" {
+	if why := verifyOpinion(res, out.Opinion); why != "" {
 		return "", &llm.SchemaIssue{Kind: llm.ErrBadJSON, Detail: "模型改动了数字或条款：" + why}
 	}
 	return out.Opinion, nil
@@ -566,7 +549,7 @@ var reMoney = regexp.MustCompile(`¥\s?\d[\d,]*\.\d{2}`)
 var reCheckID = regexp.MustCompile(`R\d{2}-[a-z]`)
 
 // verifyOpinion 核对意见文本中的金额和条款编号。
-func (e *Engine) verifyOpinion(res *Result, text string) string {
+func verifyOpinion(res *Result, text string) string {
 	allowed := map[string]bool{}
 	add := func(v int64) { allowed[fen(v)] = true; allowed[strings.ReplaceAll(fen(v), "¥", "")] = true }
 	add(res.ApprovedFen)
@@ -602,4 +585,31 @@ func (e *Engine) verifyOpinion(res *Result, text string) string {
 		}
 	}
 	return ""
+}
+
+// contains 判断字符串切片是否包含某值。
+func contains(xs []string, x string) bool {
+	for _, s := range xs {
+		if s == x {
+			return true
+		}
+	}
+	return false
+}
+
+// containsStr 同 contains，保留旧名以便调用点不改。
+func containsStr(xs []string, x string) bool { return contains(xs, x) }
+
+// 下面三个是插件导出能力的薄封装：编排层展示时需要中文名，但不该自己再维护一份。
+func judgeCategoryCN(c string) string       { return judge.CategoryCN(c) }
+func judgeFieldCN(f judge.FieldName) string { return judge.FieldCN(f) }
+func judgeToolCN(s judge.Status) string     { return judge.ToolCN(s) }
+
+// fen 把分格式化为 ¥xx.yy，供审核意见与事件使用。
+func fen(v int64) string {
+	sign := ""
+	if v < 0 {
+		sign, v = "-", -v
+	}
+	return fmt.Sprintf("¥%s%d.%02d", sign, v/100, v%100)
 }

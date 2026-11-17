@@ -14,7 +14,7 @@ import (
 
 	"reimburse/internal/mockgen"
 	"reimburse/internal/schema"
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 func main() {
@@ -24,12 +24,12 @@ func main() {
 	dry := flag.Bool("dry", false, "只自检与统计，不落盘")
 	flag.Parse()
 
-	var rf *rules.File
+	var rf *policy.File
 	var err error
 	if *rulesPath != "" {
-		rf, err = rules.LoadFile(*rulesPath)
+		rf, err = policy.LoadFile(*rulesPath)
 	} else {
-		rf, err = rules.Load()
+		rf, err = policy.Load()
 	}
 	if err != nil {
 		fatal("读取规则表: %v", err)
@@ -66,7 +66,7 @@ func main() {
 	report(rf, cases, *dry, filepath.Join(*out, "cases"))
 }
 
-func report(rf *rules.File, cases []*schema.Case, dry bool, dir string) {
+func report(rf *policy.File, cases []*schema.Case, dry bool, dir string) {
 	dec := map[string]int{}
 	cat := map[string]int{}
 	for _, c := range cases {

@@ -1,0 +1,45 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26436658179840797545",
+      "issue_date": "2026-10-01",
+      "total_fen": 31000,
+      "buyer_tax_id": "",
+      "seller_tax_id": "91310103692B6R5G35",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310103692B6R5G35",
+      "name": "东海铁路客运服务有限公司",
+      "city": "上海",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC24N1",
+      "invoice_no": "26188253733769599915",
+      "applicant_id": "E2001",
+      "seller_tax_id": "91310117MQD1JRM6K1",
+      "issue_date": "2026-09-06",
+      "amount_fen": 37348,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-11"
+    },
+    {
+      "claim_no": "BHC24N2",
+      "invoice_no": "26279675553160967997",
+      "applicant_id": "E1003",
+      "seller_tax_id": "91310103X8AW8NFBQ4",
+      "issue_date": "2026-09-05",
+      "amount_fen": 170396,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-10"
+    }
+  ],
+  "faults": null
+}

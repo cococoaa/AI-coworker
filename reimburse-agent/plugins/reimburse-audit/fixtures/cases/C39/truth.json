@@ -1,0 +1,60 @@
+{
+  "id": "C39",
+  "title": "工作餐人均140元，超过100元",
+  "tags": [
+    "meal",
+    "violation"
+  ],
+  "decision": "approve_with_adjustment",
+  "hits": [
+    "R11-a"
+  ],
+  "approved_fen": 40000,
+  "invoice": {
+    "invoice_no": "26419429437566340186",
+    "issue_date": "2026-10-05",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "西安聚贤楼餐饮管理有限公司",
+    "seller_tax_id": "91310114U4E3NEJR29",
+    "item_name": "*餐饮服务*餐费",
+    "tax_rate_pct": 6,
+    "ex_tax_fen": 52830,
+    "tax_fen": 3170,
+    "total_fen": 56000
+  },
+  "support": {
+    "kind": "consumption",
+    "date": "2026-10-05",
+    "city": "西安",
+    "venue": "西安聚贤楼",
+    "lines": [
+      {
+        "name": "清蒸鲈鱼",
+        "qty": 1,
+        "amount_fen": 12727
+      },
+      {
+        "name": "宫保鸡丁",
+        "qty": 1,
+        "amount_fen": 12727
+      },
+      {
+        "name": "干锅花菜",
+        "qty": 1,
+        "amount_fen": 12727
+      },
+      {
+        "name": "米饭",
+        "qty": 2,
+        "amount_fen": 12727
+      },
+      {
+        "name": "红烧鲫鱼",
+        "qty": 1,
+        "amount_fen": 5092
+      }
+    ],
+    "total_fen": 56000
+  }
+}

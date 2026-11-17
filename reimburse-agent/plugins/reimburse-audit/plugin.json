@@ -1,0 +1,67 @@
+{
+  "name": "reimburse-audit",
+  "display_name": "报销审核判定插件",
+  "version": "1.0.0",
+  "description": "把一家公司的报销制度变成可执行的判定：读制度数据（policy），对一张单据给出结论、命中项与依据。不调用模型、不访问网络，只做判定。",
+  "license": "内部使用",
+  "entrypoint": {
+    "policy": "reimburse/plugins/reimburse-audit/policy",
+    "judge": "reimburse/plugins/reimburse-audit/judge"
+  },
+  "policy_version": "mock-1.0",
+  "layers": {
+    "policy": {
+      "path": "policy/",
+      "owner": "财务 / 内控",
+      "description": "阈值、条款原文、禁止项目、城市分档、公司抬头。改这里不需要重新编译。"
+    },
+    "judge": {
+      "path": "judge/",
+      "owner": "研发",
+      "description": "判定逻辑。加规则要改这里，并跑 conformance。"
+    },
+    "fixtures": {
+      "path": "fixtures/",
+      "owner": "研发 + 业务",
+      "description": "带标准答案的用例，判定与业务口径共同维护。"
+    }
+  },
+  "requires": {
+    "go": ">=1.21",
+    "external_deps": [],
+    "host_interfaces": [
+      {
+        "name": "InvoiceVerifier",
+        "method": "Verify(ctx, invoiceNo) (Verdict, []InvoiceRecord)",
+        "description": "查发票在税务平台是否登记、是否作废或红冲。查无此票返回 Status=NotFound，不是错误。"
+      },
+      {
+        "name": "CompanyVerifier",
+        "method": "Check(ctx, taxID) (Verdict, []CompanyRecord)",
+        "description": "查销售方企业登记状态。"
+      },
+      {
+        "name": "HistoryFinder",
+        "method": "Find(ctx, HistoryQuery) (Verdict, []HistoryRecord)",
+        "description": "查历史报销记录，用于查重与拆单识别。"
+      }
+    ]
+  },
+  "outputs": {
+    "decision": ["approve", "approve_with_adjustment", "need_more_info", "manual_review", "reject"],
+    "rule_count": 15,
+    "check_count": 26,
+    "priority": ["reject", "manual_review", "need_more_info", "approve_with_adjustment", "approve"]
+  },
+  "validation": {
+    "policy_check": "go run ./plugins/reimburse-audit/tools/policy-check",
+    "conformance": "go run ./plugins/reimburse-audit/tools/conformance",
+    "unit_tests": "go test ./plugins/reimburse-audit/..."
+  },
+  "presets": ["default", "strict", "municipal-soe"],
+  "limitations": [
+    "只判定，不执行：不付款、不改凭证、不冲销发票",
+    "判定依赖宿主导入的抽取字段与工具结果；字段不可信或工具失败时一律不作判定并转人工",
+    "制度数据与本插件均为演示虚构，不代表任何真实企业或监管口径"
+  ]
+}

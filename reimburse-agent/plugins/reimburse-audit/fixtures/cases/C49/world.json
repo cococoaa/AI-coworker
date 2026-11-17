@@ -1,0 +1,46 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26388628216376193821",
+      "issue_date": "2026-10-19",
+      "total_fen": 62000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310116A91G1XX1UD",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310116A91G1XX1UD",
+      "name": "深圳悦途酒店管理有限公司",
+      "city": "深圳",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC49N1",
+      "invoice_no": "26200369791561832803",
+      "applicant_id": "E2001",
+      "seller_tax_id": "913101181XYGFPKFHQ",
+      "issue_date": "2026-09-14",
+      "amount_fen": 82226,
+      "category": "lodging",
+      "status": "rejected",
+      "submit_date": "2026-09-19"
+    },
+    {
+      "claim_no": "BHC49N2",
+      "invoice_no": "26349357019949025828",
+      "applicant_id": "E1001",
+      "seller_tax_id": "9131010861751RQX7B",
+      "issue_date": "2026-09-08",
+      "amount_fen": 50139,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-09-13"
+    }
+  ],
+  "faults": null
+}

@@ -1,0 +1,43 @@
+{
+  "id": "C11",
+  "title": "提交日距出差结束日31天，超期",
+  "tags": [
+    "transport",
+    "boundary"
+  ],
+  "decision": "need_more_info",
+  "hits": [
+    "R07-a"
+  ],
+  "approved_fen": 0,
+  "invoice": {
+    "invoice_no": "26404011075737281231",
+    "issue_date": "2026-10-23",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "东海铁路客运服务有限公司",
+    "seller_tax_id": "91310103692B6R5G35",
+    "item_name": "*运输服务*铁路旅客运输",
+    "tax_rate_pct": 9,
+    "ex_tax_fen": 44587,
+    "tax_fen": 4013,
+    "total_fen": 48600
+  },
+  "support": {
+    "kind": "itinerary",
+    "mode": "train",
+    "person": "赵雅琪",
+    "date": "2026-10-23",
+    "vehicle": "G3639",
+    "from": "上海",
+    "to": "南京",
+    "seat": "二等座",
+    "lines": [
+      {
+        "name": "票价",
+        "amount_fen": 48600
+      }
+    ],
+    "total_fen": 48600
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "id": "C16",
+  "title": "招待1500元，3天前同店已报1200元，窗口内合计超审批线",
+  "tags": [
+    "meal",
+    "boundary"
+  ],
+  "decision": "manual_review",
+  "hits": [
+    "R05-b"
+  ],
+  "approved_fen": 0,
+  "invoice": {
+    "invoice_no": "26141970487430485236",
+    "issue_date": "2026-09-25",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "成都川味坊餐饮管理有限公司",
+    "seller_tax_id": "913101119AU0BXH6ER",
+    "item_name": "*餐饮服务*餐费",
+    "tax_rate_pct": 6,
+    "ex_tax_fen": 141509,
+    "tax_fen": 8491,
+    "total_fen": 150000
+  },
+  "support": {
+    "kind": "consumption",
+    "date": "2026-09-25",
+    "city": "成都",
+    "venue": "成都川味坊",
+    "lines": [
+      {
+        "name": "饮料",
+        "qty": 1,
+        "amount_fen": 8823
+      },
+      {
+        "name": "红烧鲫鱼",
+        "qty": 1,
+        "amount_fen": 35294
+      },
+      {
+        "name": "酸辣汤",
+        "qty": 1,
+        "amount_fen": 17647
+      },
+      {
+        "name": "清蒸鲈鱼",
+        "qty": 1,
+        "amount_fen": 44117
+      },
+      {
+        "name": "蒜蓉粉丝虾",
+        "qty": 2,
+        "amount_fen": 26470
+      },
+      {
+        "name": "米饭",
+        "qty": 1,
+        "amount_fen": 17649
+      }
+    ],
+    "total_fen": 150000
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "id": "C55",
+  "title": "发票金额污损无法辨认，住宿超标项不作判定",
+  "tags": [
+    "lodging",
+    "fault"
+  ],
+  "decision": "manual_review",
+  "hits": [
+    "R15-b"
+  ],
+  "approved_fen": 0,
+  "invoice": {
+    "invoice_no": "26171801667222176003",
+    "issue_date": "2026-10-30",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "深圳锦程酒店管理有限公司",
+    "seller_tax_id": "913101183UDT49JM99",
+    "item_name": "*住宿服务*住宿费",
+    "tax_rate_pct": 6,
+    "ex_tax_fen": 169811,
+    "tax_fen": 10189,
+    "total_fen": 180000
+  },
+  "support": {
+    "kind": "folio",
+    "person": "周明辉",
+    "hotel": "锦程酒店(深圳中心店)",
+    "city": "深圳",
+    "check_in": "2026-10-28",
+    "check_out": "2026-10-30",
+    "nights": 2,
+    "lines": [
+      {
+        "date": "2026-10-28",
+        "name": "房费",
+        "amount_fen": 90000
+      },
+      {
+        "date": "2026-10-29",
+        "name": "房费",
+        "amount_fen": 90000
+      }
+    ],
+    "total_fen": 180000
+  },
+  "unreadable": [
+    "total_amount"
+  ]
+}

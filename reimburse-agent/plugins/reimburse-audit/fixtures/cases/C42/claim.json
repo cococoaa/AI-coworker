@@ -1,0 +1,21 @@
+{
+  "claim_no": "BX26110042",
+  "request_no": "SQ26100142",
+  "applicant": {
+    "name": "陈思远",
+    "employee_id": "E1001",
+    "grade": "P"
+  },
+  "category": "meal",
+  "city": "长沙",
+  "start_date": "2026-09-24",
+  "end_date": "2026-09-24",
+  "purpose": "项目组加班工作餐",
+  "amount_fen": 24000,
+  "submit_date": "2026-10-02",
+  "internal_count": 3,
+  "attachments": {
+    "invoice_file": "invoice.txt",
+    "support_file": "support.txt"
+  }
+}

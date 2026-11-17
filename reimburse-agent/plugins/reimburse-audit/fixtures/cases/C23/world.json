@@ -1,0 +1,46 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26146137993750891932",
+      "issue_date": "2026-10-01",
+      "total_fen": 89000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101106FJ4NMP0UM",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "913101106FJ4NMP0UM",
+      "name": "云帆航空有限责任公司",
+      "city": "上海",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC23N1",
+      "invoice_no": "26302108034470613428",
+      "applicant_id": "E1004",
+      "seller_tax_id": "913101067NXH7HYPHU",
+      "issue_date": "2026-08-27",
+      "amount_fen": 135675,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-01"
+    },
+    {
+      "claim_no": "BHC23N2",
+      "invoice_no": "26416539067983856618",
+      "applicant_id": "E2001",
+      "seller_tax_id": "91310115JC115KA79J",
+      "issue_date": "2026-09-16",
+      "amount_fen": 122015,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-09-21"
+    }
+  ],
+  "faults": null
+}

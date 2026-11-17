@@ -1,0 +1,34 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26110566608052002274",
+      "issue_date": "2026-10-05",
+      "total_fen": 120000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "91310109FPL4FDQE9P",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "91310109FPL4FDQE9P",
+      "name": "苏州川味坊餐饮管理有限公司",
+      "city": "苏州",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC31K1",
+      "invoice_no": "26438249548761351228",
+      "applicant_id": "E2001",
+      "seller_tax_id": "91310109FPL4FDQE9P",
+      "issue_date": "2026-10-05",
+      "amount_fen": 110000,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-10-10"
+    }
+  ],
+  "faults": null
+}

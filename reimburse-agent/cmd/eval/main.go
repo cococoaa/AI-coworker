@@ -22,7 +22,7 @@ import (
 	"reimburse/internal/llm"
 	"reimburse/internal/mcptools"
 	"reimburse/internal/schema"
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 // Outcome 是单条用例的评测结果。
@@ -162,7 +162,7 @@ func main() {
 	// 核准金额平均绝对误差，只在"通过/调整后通过"的用例上有意义。
 	var sae int64
 	for _, o := range rep.Outcomes {
-		if o.Expected == rules.Approve || o.Expected == rules.ApproveAdj {
+		if o.Expected == policy.Approve || o.Expected == policy.ApproveAdj {
 			s.ApprovedCases++
 			sae += abs64(o.ApprovedGot - o.ApprovedWant)
 		}
@@ -198,7 +198,7 @@ func main() {
 	}
 }
 
-func evalOne(rf *rules.File, cfg llm.Config, c *schema.Case, synth bool) Outcome {
+func evalOne(rf *policy.File, cfg llm.Config, c *schema.Case, synth bool) Outcome {
 	t0 := time.Now()
 	o := Outcome{ID: c.ID, Title: c.Truth.Title, Category: c.Claim.Category,
 		Expected: c.Truth.Decision, HitsWant: c.Truth.Hits, ApprovedWant: c.Truth.ApprovedFen}
@@ -207,7 +207,7 @@ func evalOne(rf *rules.File, cfg llm.Config, c *schema.Case, synth bool) Outcome
 	if synth {
 		impl = &llm.SyntheticLLM{Case: c, Synth: &llm.Synthetic{}, Fallback: impl}
 	}
-	rv := &audit.Reviewer{LLM: impl, Cfg: &cfg, Disabled: map[string]bool{}, ToolFaults: map[string]audit.ToolStatus{}}
+	rv := &audit.Reviewer{LLM: impl, Cfg: &cfg, Disabled: map[string]bool{}, ToolFaults: map[string]audit.Status{}}
 	for _, f := range c.World.Faults {
 		st := audit.ToolFailed
 		if f.Mode == schema.FaultTimeout {
@@ -217,7 +217,7 @@ func evalOne(rf *rules.File, cfg llm.Config, c *schema.Case, synth bool) Outcome
 	}
 	srv := mcptools.NewServer(mcptools.Options{Data: mcptools.NewStore(c.World)})
 	_, remote := mcptools.InMemory(nil, srv)
-	rep := audit.New(rf).Run(context.Background(), &c.Claim, c.InvoiceText, c.SupportText,
+	rep := audit.Run(audit.New(rf), context.Background(), &c.Claim, c.InvoiceText, c.SupportText,
 		audit.WrapMCP(remote), rv, audit.Options{})
 
 	o.Got = rep.Result.Decision
@@ -273,7 +273,7 @@ func printSummary(rep *Report) {
 	}
 }
 
-func renderMarkdown(rep *Report, rf *rules.File) string {
+func renderMarkdown(rep *Report, rf *policy.File) string {
 	s := rep.Summary
 	var b strings.Builder
 	b.WriteString("# 评测报告\n\n")
@@ -292,7 +292,7 @@ func renderMarkdown(rep *Report, rf *rules.File) string {
 	fmt.Fprintf(&b, "| 判定项覆盖 | %d / %d |\n", s.CheckCovered, s.CheckTotal)
 	approvedSame := 0
 	for _, o := range rep.Outcomes {
-		if (o.Expected == rules.Approve || o.Expected == rules.ApproveAdj) && o.ApprovedGot == o.ApprovedWant {
+		if (o.Expected == policy.Approve || o.Expected == policy.ApproveAdj) && o.ApprovedGot == o.ApprovedWant {
 			approvedSame++
 		}
 	}
@@ -308,7 +308,7 @@ func renderMarkdown(rep *Report, rf *rules.File) string {
 		}
 	}
 	b.WriteString("\n## 按类别\n\n| 类别 | 条数 |\n|---|---|\n")
-	for _, c := range []string{rules.CatTransport, rules.CatLodging, rules.CatMeal} {
+	for _, c := range []string{policy.CatTransport, policy.CatLodging, policy.CatMeal} {
 		fmt.Fprintf(&b, "| %s | %d |\n", c, s.ByCategory[c])
 	}
 
@@ -358,11 +358,11 @@ func max1(n int) int {
 	return n
 }
 
-func loadRules(p string) (*rules.File, error) {
+func loadRules(p string) (*policy.File, error) {
 	if p == "" {
-		return rules.Load()
+		return policy.Load()
 	}
-	return rules.LoadFile(p)
+	return policy.LoadFile(p)
 }
 
 func fatal(f string, a ...any) {

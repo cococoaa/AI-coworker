@@ -27,7 +27,7 @@ type RemoteSpy struct {
 type ToolEvent struct {
 	Tool     string        `json:"tool"`
 	Args     string        `json:"args"`
-	Status   ToolStatus    `json:"status"`
+	Status   Status        `json:"status"`
 	Detail   string        `json:"detail,omitempty"`
 	Records  int           `json:"records"`
 	Raw      string        `json:"raw,omitempty"`
@@ -47,29 +47,29 @@ func (s *RemoteSpy) record(ev ToolEvent) {
 }
 
 // VerifyInvoice 调用内层并记录。
-func (s *RemoteSpy) VerifyInvoice(ctx context.Context, invoiceNo string) ToolResult {
+func (s *RemoteSpy) VerifyInvoice(ctx context.Context, invoiceNo string) ToolOutcome {
 	t0 := time.Now()
 	tr := s.Inner.VerifyInvoice(ctx, invoiceNo)
-	s.record(ToolEvent{Tool: "verify_invoice", Args: "invoice_no=" + invoiceNo, Status: tr.Status,
-		Detail: tr.Detail, Records: len(tr.Invoices), Raw: tr.Raw, Duration: time.Since(t0), At: t0})
+	s.record(ToolEvent{Tool: "verify_invoice", Args: "invoice_no=" + invoiceNo, Status: tr.Status.Status,
+		Detail: tr.Status.Reason, Records: len(tr.Invoices), Raw: tr.Raw, Duration: time.Since(t0), At: t0})
 	return tr
 }
 
 // CheckCompany 调用内层并记录。
-func (s *RemoteSpy) CheckCompany(ctx context.Context, taxID string) ToolResult {
+func (s *RemoteSpy) CheckCompany(ctx context.Context, taxID string) ToolOutcome {
 	t0 := time.Now()
 	tr := s.Inner.CheckCompany(ctx, taxID)
-	s.record(ToolEvent{Tool: "check_company", Args: "tax_id=" + taxID, Status: tr.Status,
-		Detail: tr.Detail, Records: len(tr.Companies), Raw: tr.Raw, Duration: time.Since(t0), At: t0})
+	s.record(ToolEvent{Tool: "check_company", Args: "tax_id=" + taxID, Status: tr.Status.Status,
+		Detail: tr.Status.Reason, Records: len(tr.Companies), Raw: tr.Raw, Duration: time.Since(t0), At: t0})
 	return tr
 }
 
 // CheckHistory 调用内层并记录。
-func (s *RemoteSpy) CheckHistory(ctx context.Context, q HistoryQuery) ToolResult {
+func (s *RemoteSpy) CheckHistory(ctx context.Context, q HistoryQuery) ToolOutcome {
 	t0 := time.Now()
 	tr := s.Inner.CheckHistory(ctx, q)
 	s.record(ToolEvent{Tool: "check_history",
 		Args:   "invoice_no=" + q.InvoiceNo + " applicant_id=" + q.ApplicantID + " seller_tax_id=" + q.SellerTaxID,
-		Status: tr.Status, Detail: tr.Detail, Records: len(tr.History), Raw: tr.Raw, Duration: time.Since(t0), At: t0})
+		Status: tr.Status.Status, Detail: tr.Status.Reason, Records: len(tr.History), Raw: tr.Raw, Duration: time.Since(t0), At: t0})
 	return tr
 }

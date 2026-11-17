@@ -5,7 +5,7 @@ import (
 	"math/rand"
 
 	"reimburse/internal/schema"
-	"reimburse/rules"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 // Person 是 mock 员工。职级 P 普通员工，M 经理，D 总监。
@@ -39,7 +39,7 @@ const (
 // Gen 保存生成过程的全部状态。同一个种子必然得到同一批用例。
 type Gen struct {
 	R       *rand.Rand
-	RF      *rules.File
+	RF      *policy.File
 	seed    int64
 	sellers map[string]schema.Company
 	usedNo  map[string]bool
@@ -47,7 +47,7 @@ type Gen struct {
 	n       int
 }
 
-func NewGen(seed int64, rf *rules.File) *Gen {
+func NewGen(seed int64, rf *policy.File) *Gen {
 	return &Gen{R: rand.New(rand.NewSource(seed)), RF: rf, seed: seed,
 		sellers: map[string]schema.Company{}, usedNo: map[string]bool{}, usedTax: map[string]bool{}}
 }
@@ -84,13 +84,13 @@ func (g *Gen) cityOfTier(tier string) string {
 func (g *Gen) randStart() string { return addDays("2026-09-21", g.R.Intn(38)) }
 
 func (g *Gen) newTaxID() string {
-	cs := rules.TaxIDCharset()
+	cs := policy.TaxIDCharset()
 	for {
 		b := []byte(fmt.Sprintf("913101%02d", g.R.Intn(20)))
 		for i := 0; i < 9; i++ {
 			b = append(b, cs[g.R.Intn(len(cs))])
 		}
-		c, _ := rules.TaxIDCheckChar(string(b))
+		c, _ := policy.TaxIDCheckChar(string(b))
 		id := string(b) + string(c)
 		if id != g.RF.Params.Company.TaxID && !g.usedTax[id] {
 			g.usedTax[id] = true

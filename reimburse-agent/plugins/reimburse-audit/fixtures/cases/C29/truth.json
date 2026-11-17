@@ -1,0 +1,48 @@
+{
+  "id": "C29",
+  "title": "同一发票号码已有通过的报销记录",
+  "tags": [
+    "lodging",
+    "violation"
+  ],
+  "decision": "reject",
+  "hits": [
+    "R04-a"
+  ],
+  "approved_fen": 0,
+  "invoice": {
+    "invoice_no": "26334764353493803100",
+    "issue_date": "2026-10-23",
+    "buyer_name": "星河科技有限公司",
+    "buyer_tax_id": "91310115MA1FL8X3K0",
+    "seller_name": "青岛云舍酒店管理有限公司",
+    "seller_tax_id": "91310103AEAFLCAA04",
+    "item_name": "*住宿服务*住宿费",
+    "tax_rate_pct": 6,
+    "ex_tax_fen": 67925,
+    "tax_fen": 4075,
+    "total_fen": 72000
+  },
+  "support": {
+    "kind": "folio",
+    "person": "林晓雯",
+    "hotel": "云舍酒店(青岛中心店)",
+    "city": "青岛",
+    "check_in": "2026-10-21",
+    "check_out": "2026-10-23",
+    "nights": 2,
+    "lines": [
+      {
+        "date": "2026-10-21",
+        "name": "房费",
+        "amount_fen": 36000
+      },
+      {
+        "date": "2026-10-22",
+        "name": "房费",
+        "amount_fen": 36000
+      }
+    ],
+    "total_fen": 72000
+  }
+}

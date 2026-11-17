@@ -1,0 +1,46 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26305188240661770454",
+      "issue_date": "2026-10-01",
+      "total_fen": 199999,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "9131010773CJWM9LLT",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "9131010773CJWM9LLT",
+      "name": "厦门江南小馆餐饮管理有限公司",
+      "city": "厦门",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC12N1",
+      "invoice_no": "26316927453252823751",
+      "applicant_id": "E2003",
+      "seller_tax_id": "913101096E3TRLDUT2",
+      "issue_date": "2026-09-12",
+      "amount_fen": 64446,
+      "category": "lodging",
+      "status": "approved",
+      "submit_date": "2026-09-17"
+    },
+    {
+      "claim_no": "BHC12N2",
+      "invoice_no": "26407267677635810964",
+      "applicant_id": "E2003",
+      "seller_tax_id": "913101106GKMHQPWM3",
+      "issue_date": "2026-08-26",
+      "amount_fen": 159207,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "approved",
+      "submit_date": "2026-08-31"
+    }
+  ],
+  "faults": null
+}

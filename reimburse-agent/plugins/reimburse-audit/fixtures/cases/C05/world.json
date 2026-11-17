@@ -1,0 +1,46 @@
+{
+  "invoices": [
+    {
+      "invoice_no": "26488467607931082854",
+      "issue_date": "2026-09-26",
+      "total_fen": 150000,
+      "buyer_tax_id": "91310115MA1FL8X3K0",
+      "seller_tax_id": "913101108NW6907Y6L",
+      "status": "normal"
+    }
+  ],
+  "companies": [
+    {
+      "tax_id": "913101108NW6907Y6L",
+      "name": "广州老街味道餐饮管理有限公司",
+      "city": "广州",
+      "status": "存续"
+    }
+  ],
+  "history": [
+    {
+      "claim_no": "BHC05N1",
+      "invoice_no": "26472423373663328856",
+      "applicant_id": "E2002",
+      "seller_tax_id": "913101032WE46FFXUF",
+      "issue_date": "2026-08-25",
+      "amount_fen": 69971,
+      "category": "transport",
+      "transport_mode": "train",
+      "status": "rejected",
+      "submit_date": "2026-08-30"
+    },
+    {
+      "claim_no": "BHC05N2",
+      "invoice_no": "26193637072402918718",
+      "applicant_id": "E1001",
+      "seller_tax_id": "91310115AB8GG2F7YF",
+      "issue_date": "2026-09-06",
+      "amount_fen": 110021,
+      "category": "meal",
+      "status": "approved",
+      "submit_date": "2026-09-11"
+    }
+  ],
+  "faults": null
+}
