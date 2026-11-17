@@ -21,3 +21,5 @@ tokens.txt
 .idea/
 .vscode/
 .DS_Store
+quota.json
+people.json

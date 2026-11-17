@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"reimburse/internal/audit"
+	"reimburse/internal/mcpauth"
+	"reimburse/internal/schema"
+	"reimburse/plugins/reimburse-audit/policy"
 )
 
 // Routes 注册全部路由。
@@ -30,7 +33,10 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/api/audit", s.handleAudit)
 	mux.HandleFunc("/api/audit/", s.handleAuditSub)
 	mux.HandleFunc("/api/review", s.handleReview)
+	mux.HandleFunc("/api/review/revoke", s.handleRevoke)
 	mux.HandleFunc("/api/reviews", s.handleReviews)
+	mux.HandleFunc("/api/quota", s.handleQuota)
+	mux.HandleFunc("/api/people", s.handlePeople)
 	mux.HandleFunc("/api/meta", s.handleMeta)
 	mux.HandleFunc("/api/stats", s.handleStats)
 	return logRequests(mux)
@@ -104,6 +110,21 @@ func (s *Server) handleAudit(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, map[string]any{"error": "用例不存在: " + req.CaseID}, 404)
 		return
 	}
+	// 配额预检：预算耗尽时熔断，不再自动判定。
+	//
+	// 注意这里**不做降级**（不用更便宜的模型凑合判）。积压是可见的，错批是不可见的。
+	if s.Quota != nil {
+		client := quotaClient(r)
+		st := s.Quota.Check(client)
+		if st.Blocked {
+			jsonOut(w, map[string]any{
+				"error":  "本周 AI 用量已达上限，自动审核已熔断",
+				"quota":  st,
+				"action": "该单据需转人工处理；请等待下周预算刷新或由管理员调整预算",
+			}, 429)
+			return
+		}
+	}
 	opt := audit.Options{Injected: map[string]audit.Status{}}
 	for _, f := range req.Faults {
 		switch f.Mode {
@@ -117,6 +138,7 @@ func (s *Server) handleAudit(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	sess := s.Start(c, opt, req.Explain, req.Disabled)
+	sess.QuotaClient = quotaClient(r)
 	jsonOut(w, map[string]any{"session_id": sess.ID, "case_id": c.ID, "started": sess.Started}, 200)
 }
 
@@ -210,36 +232,218 @@ func (s *Server) streamEvents(w http.ResponseWriter, r *http.Request, sess *Sess
 	}
 }
 
+// reviewRequest 是提交复核结论的请求体。
+// 关键变化：operator 不再是前端自称的字符串，而是必须与令牌一起使用的工号，
+// 由服务端按名单校验（见 identity 包）。
+type reviewRequest struct {
+	CaseID   string `json:"case_id"`
+	ClaimNo  string `json:"claim_no"`
+	Decision string `json:"decision"`
+	Note     string `json:"note"`
+	// EmployeeID 是操作人工号。缺省时回退到 X-Employee-ID 请求头。
+	EmployeeID string `json:"employee_id"`
+	// DecisionBefore 是提交时的系统自动判定，用于对比"人是否改了结论"。
+	DecisionBefore string `json:"decision_before"`
+}
+
+// identify 从请求里取工号：优先 body，其次请求头。
+// 令牌只证明"这个部署允许访问"，工号才是身份。
+func identify(bodyID string, r *http.Request) string {
+	if bodyID != "" {
+		return bodyID
+	}
+	return r.Header.Get("X-Employee-ID")
+}
+
 func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		jsonOut(w, map[string]any{"error": "只支持 POST"}, 405)
 		return
 	}
-	var rv ReviewOutcome
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&rv); err != nil {
+	var req reviewRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
 		jsonOut(w, map[string]any{"error": "请求体解析失败"}, 400)
 		return
 	}
-	if _, ok := s.Find(rv.CaseID); !ok {
+	c, ok := s.Find(req.CaseID)
+	if !ok {
 		jsonOut(w, map[string]any{"error": "用例不存在"}, 404)
 		return
 	}
-	switch rv.Decision {
+	switch req.Decision {
 	case "approve", "approve_with_adjustment", "reject", "need_more_info", "manual_review":
 	default:
 		jsonOut(w, map[string]any{"error": "结论取值不合法"}, 400)
 		return
 	}
-	rv.At = time.Now()
-	if rv.Operator == "" {
-		rv.Operator = "财务复核"
+
+	// 身份校验：工号必须在名单里，且有复核权限。默认拒绝。
+	id := identify(req.EmployeeID, r)
+	if s.People == nil {
+		jsonOut(w, map[string]any{"error": "服务未配置人员名单，拒绝写入复核结论"}, 403)
+		return
 	}
-	s.AddReview(rv)
-	jsonOut(w, map[string]any{"ok": true, "review": rv}, 200)
+	person, err := s.People.Authenticate(id, "review")
+	if err != nil {
+		jsonOut(w, map[string]any{"error": err.Error()}, 403)
+		return
+	}
+
+	rv := ReviewOutcome{
+		CaseID: req.CaseID, ClaimNo: req.ClaimNo, Decision: req.Decision, Note: req.Note,
+		Operator: person.EmployeeID, OperatorName: person.Name, DecisionBefore: req.DecisionBefore,
+	}
+	// 计算这条结论会写什么进查重库（只有"通过"类才写）。
+	status := schema.HistRejected
+	if req.Decision == policy.Approve || req.Decision == policy.ApproveAdj {
+		status = schema.HistApproved
+	}
+	hist := &schema.HistRecord{
+		InvoiceNo: c.Truth.Invoice.InvoiceNo, ApplicantID: c.Claim.Applicant.EmployeeID,
+		SellerTaxID: c.Truth.Invoice.SellerTaxID, IssueDate: c.Truth.Invoice.IssueDate,
+		AmountFen: c.Truth.Invoice.TotalFen, Category: c.Claim.Category,
+		Status: status, SubmitDate: c.Claim.SubmitDate,
+	}
+	saved, err := s.AddReview(rv, hist)
+	if err != nil {
+		jsonOut(w, map[string]any{"error": err.Error()}, 400)
+		return
+	}
+	jsonOut(w, map[string]any{
+		"ok":     true,
+		"review": saved,
+		// 明确告诉前端这条结论对查重库做了什么。
+		"impact": impactOf(saved),
+	}, 200)
+}
+
+// quotaClient 返回调用方标识，用于配额分桶。
+// 优先用令牌校验出的调用方名（mcpauth 中间件会写进 context），
+// 拿不到时记 "anonymous"——不假装知道是谁。
+func quotaClient(r *http.Request) string {
+	if ti := mcpauth.TokenInfoFrom(r.Context()); ti != nil && ti.UserID != "" {
+		return ti.UserID
+	}
+	// 本机未启用鉴权时没有令牌信息；退到工号请求头，再退到 "local"。
+	// 不假装知道是谁，但要给一个能对上人的标识。
+	if id := r.Header.Get("X-Employee-ID"); id != "" {
+		return id
+	}
+	return "local"
+}
+
+// impactOf 把"这条结论会影响后续查重"讲清楚，供界面直接展示。
+func impactOf(r ReviewOutcome) map[string]any {
+	if !r.AffectedHistory.Applied {
+		return map[string]any{
+			"affects_dedup": false,
+			"message":       "本条结论不写入查重库（只有通过/调整后通过才写），不影响后续单据。",
+		}
+	}
+	return map[string]any{
+		"affects_dedup": true,
+		"history_key":   r.AffectedHistory.ClaimNo,
+		"invoice_no":    r.AffectedHistory.InvoiceNo,
+		"message": "本条结论已写入查重库：发票 " + r.AffectedHistory.InvoiceNo +
+			" 将被标记为已报销过，后续同一张发票会被判重复报销。如需撤回，点「撤销」。",
+	}
+}
+
+// revokeRequest 是撤销复核结论的请求体。
+type revokeRequest struct {
+	ID         string `json:"id"`
+	Reason     string `json:"reason"`
+	EmployeeID string `json:"employee_id"`
+}
+
+// handleRevoke 撤销一条复核结论，并从查重库回滚。
+func (s *Server) handleRevoke(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonOut(w, map[string]any{"error": "只支持 POST"}, 405)
+		return
+	}
+	var req revokeRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		jsonOut(w, map[string]any{"error": "请求体解析失败"}, 400)
+		return
+	}
+	if req.ID == "" {
+		jsonOut(w, map[string]any{"error": "缺少复核记录编号 id"}, 400)
+		return
+	}
+	if s.People == nil {
+		jsonOut(w, map[string]any{"error": "服务未配置人员名单，拒绝撤销"}, 403)
+		return
+	}
+	person, err := s.People.Authenticate(identify(req.EmployeeID, r), "review")
+	if err != nil {
+		jsonOut(w, map[string]any{"error": err.Error()}, 403)
+		return
+	}
+	reason := req.Reason
+	if reason == "" {
+		reason = "未填写原因"
+	}
+	rec, err := s.RevokeReview(req.ID, person.EmployeeID, person.Name, reason)
+	if err != nil {
+		jsonOut(w, map[string]any{"error": err.Error()}, 404)
+		return
+	}
+	jsonOut(w, map[string]any{
+		"ok":     true,
+		"review": rec,
+		"impact": map[string]any{
+			"affects_dedup": false,
+			"message":       "已撤销，并从查重库撤掉对应记录；同一张发票不再因此被判重复报销。",
+		},
+	}, 200)
 }
 
 func (s *Server) handleReviews(w http.ResponseWriter, r *http.Request) {
 	jsonOut(w, map[string]any{"reviews": s.Reviews()}, 200)
+}
+
+// handleQuota 返回当前周用量。界面顶部与告警区用。
+func (s *Server) handleQuota(w http.ResponseWriter, r *http.Request) {
+	if s.Quota == nil {
+		jsonOut(w, map[string]any{"enabled": false, "message": "未启用预算控制"}, 200)
+		return
+	}
+	st := s.Quota.Check(quotaClient(r))
+	cfg := s.Quota.Config()
+	jsonOut(w, map[string]any{
+		"enabled": true, "status": st,
+		"config": map[string]any{
+			"weekly_budget_usd":  cfg.WeeklyBudgetUSD,
+			"warn_ratio":         cfg.WarnRatio,
+			"critical_ratio":     cfg.CriticalRatio,
+			"per_case_alert_usd": cfg.PerCaseAlertUSD,
+		},
+	}, 200)
+}
+
+// handlePeople 返回可选的复核人名单（只给工号与姓名，不给任何权限细节以外的信息）。
+// 界面用它在登录时给出候选，避免手输工号出错。
+func (s *Server) handlePeople(w http.ResponseWriter, r *http.Request) {
+	if s.People == nil {
+		jsonOut(w, map[string]any{"people": []any{}}, 200)
+		return
+	}
+	type brief struct {
+		EmployeeID string `json:"employee_id"`
+		Name       string `json:"name"`
+		Dept       string `json:"dept,omitempty"`
+		CanReview  bool   `json:"can_review"`
+		CanAudit   bool   `json:"can_audit"`
+	}
+	var out []brief
+	for _, p := range s.People.All() {
+		if p.Disabled {
+			continue
+		}
+		out = append(out, brief{p.EmployeeID, p.Name, p.Dept, p.CanReview, p.CanAudit})
+	}
+	jsonOut(w, map[string]any{"people": out}, 200)
 }
 
 // handleMeta 汇总界面顶部要显示的信息：模型、密钥是否就绪、工具接入方式、规则版本。

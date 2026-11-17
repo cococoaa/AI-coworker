@@ -21,8 +21,10 @@ import (
 	"syscall"
 	"time"
 
+	"reimburse/internal/identity"
 	"reimburse/internal/llm"
 	"reimburse/internal/mcpauth"
+	"reimburse/internal/quota"
 	"reimburse/internal/server"
 	"reimburse/plugins/reimburse-audit/policy"
 )
@@ -36,6 +38,12 @@ func main() {
 	mcpData := flag.String("mcp-data", "", "进程内 MCP 服务的数据文件；为空则用当前单据的库")
 	uiToken := flag.String("ui-token-file", "", "界面访问令牌文件；监听非本机地址时必须提供")
 	replayDir := flag.String("replay", "data/replay", "录制回放目录：实时调用失败时用它兜底；不存在则忽略")
+	peoplePath := flag.String("people", "people.json", "人员名单（工号 + 姓名 + 权限）。缺省文件不存在时：拒绝一切复核写入")
+	quotaPath := flag.String("quota-file", "data/quota.json", "用量配额文件（落盘，跨重启保留）")
+	weeklyBudget := flag.Float64("weekly-budget", 50, "周预算（美元）。0 表示不限制")
+	perCaseAlert := flag.Float64("per-case-alert", 0.05, "单张单据成本告警线（美元）")
+	seedUsage := flag.Float64("seed-usage", 0, "演示用：预置本周已用金额（美元），用于一键演示熔断")
+	seedClient := flag.String("seed-client", "reviewer", "演示用：预置用量记到哪个调用方名下")
 	demo := flag.Bool("demo-synthetic", false, "无密钥演示模式：模型不可用时用合成抽取，界面会标明「合成」")
 	flag.Parse()
 
@@ -53,6 +61,41 @@ func main() {
 	}
 	srv.MCPURL = *mcpURL
 	srv.MCPData = *mcpData
+
+	// 人员名单：文件不存在时是空名单（拒绝一切复核写入），不是"放行所有人"。
+	people, err := identity.LoadFile(*peoplePath)
+	if err != nil {
+		log.Fatalf("读取人员名单: %v", err)
+	}
+	srv.People = people
+	if people.Size() == 0 {
+		log.Printf("警告：人员名单为空（%s）。复核结论将被拒绝写入——这是默认拒绝，不是故障。", *peoplePath)
+	} else {
+		log.Printf("人员名单 %d 人（%s）", people.Size(), *peoplePath)
+	}
+
+	// 配额：落盘，跨重启保留。
+	qcfg := quota.DefaultConfig()
+	qcfg.WeeklyBudgetUSD = *weeklyBudget
+	if *perCaseAlert > 0 {
+		qcfg.PerCaseAlertUSD = *perCaseAlert
+	}
+	q, err := quota.Open(*quotaPath, qcfg)
+	if err != nil {
+		log.Fatalf("打开配额文件: %v", err)
+	}
+	srv.Quota = q
+	if *weeklyBudget > 0 {
+		log.Printf("周预算 $%.2f，用量文件 %s（当前周 %s 已用 $%.4f）",
+			*weeklyBudget, *quotaPath, quota.WeekKey(time.Now()), q.Check("").UsedUSD)
+	} else {
+		log.Printf("未设置周预算（不限），用量文件 %s", *quotaPath)
+	}
+	if *seedUsage > 0 {
+		st := q.AddUsage(*seedClient, *seedUsage)
+		log.Printf("演示预置：给 %s 记入 $%.2f，本周累计 $%.4f（%.1f%%）",
+			*seedClient, *seedUsage, st.UsedUSD, st.Ratio*100)
+	}
 	if st, err := os.Stat(*replayDir); err == nil && st.IsDir() {
 		srv.ReplayDir = *replayDir
 		log.Printf("回放目录 %s 已就绪：优先用真实录制，没有录制才用合成", *replayDir)

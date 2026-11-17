@@ -7,12 +7,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"reimburse/internal/audit"
+	"reimburse/internal/identity"
 	"reimburse/internal/llm"
+	"reimburse/internal/quota"
 	"reimburse/plugins/reimburse-audit/policy"
 )
 
@@ -33,6 +36,14 @@ func testServer(t *testing.T) *Server {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// 默认给测试一个可用名单：复核需要真实工号。
+	people, err := identity.New([]identity.Person{
+		{EmployeeID: "E3001", Name: "王会计", CanReview: true, CanAudit: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.People = people
 	return s
 }
 
@@ -226,39 +237,163 @@ func TestAuditSwitches(t *testing.T) {
 	}
 }
 
-// 人工复核结论要能查到，并且"通过"的结论会进查重库。
-func TestReviewWritesBack(t *testing.T) {
+// 复核结论要能查到、写进查重库，并且可撤销（撤销后从查重库回滚）。
+func TestReviewWriteAndRevoke(t *testing.T) {
 	s := testServer(t)
 	h := s.Routes()
-	body, _ := json.Marshal(map[string]any{"case_id": "C01", "claim_no": "BX26110001",
-		"decision": "approve", "note": "人工确认", "operator": "测试"})
+
+	// 1) 无工号：拒绝
+	body, _ := json.Marshal(map[string]any{"case_id": "C01", "decision": "approve"})
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+	if rec.Code != 403 {
+		t.Fatalf("未提供工号应 403，得到 %d", rec.Code)
+	}
+
+	// 2) 工号不在名单：拒绝
+	body, _ = json.Marshal(map[string]any{"case_id": "C01", "decision": "approve", "employee_id": "E9999"})
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+	if rec.Code != 403 {
+		t.Fatalf("未知工号应 403，得到 %d", rec.Code)
+	}
+
+	// 3) 正确工号：写入并回写查重库
+	body, _ = json.Marshal(map[string]any{"case_id": "C01", "claim_no": "BX26110001",
+		"decision": "approve", "note": "票据齐全", "employee_id": "E3001"})
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
+	if rec.Code != 200 {
+		t.Fatalf("复核失败: %d %s", rec.Code, rec.Body.String())
+	}
+	var resp struct {
+		Review ReviewOutcome  `json:"review"`
+		Impact map[string]any `json:"impact"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Review.Operator != "E3001" || resp.Review.OperatorName != "王会计" {
+		t.Errorf("应记录真实工号与姓名，得到 %+v", resp.Review)
+	}
+	if resp.Review.ID == "" {
+		t.Error("复核记录应有编号（撤销时要用）")
+	}
+	if resp.Impact["affects_dedup"] != true {
+		t.Errorf("应明确告知影响查重库: %v", resp.Impact)
+	}
+	if len(s.extra()) != 1 {
+		t.Fatalf("应回写 1 条查重记录，得到 %d", len(s.extra()))
+	}
+
+	// 4) 撤销：标记撤销并回滚查重库
+	body, _ = json.Marshal(map[string]any{"id": resp.Review.ID, "reason": "看错了",
+		"employee_id": "E3001"})
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review/revoke", bytes.NewReader(body)))
+	if rec.Code != 200 {
+		t.Fatalf("撤销失败: %d %s", rec.Code, rec.Body.String())
+	}
+	if len(s.extra()) != 0 {
+		t.Errorf("撤销后查重库应为空，实际还有 %d 条", len(s.extra()))
+	}
+
+	// 5) 记录仍在（审计要能看到谁撤的）
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/api/reviews", nil))
+	var list struct {
+		Reviews []ReviewOutcome `json:"reviews"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &list)
+	if len(list.Reviews) != 1 || !list.Reviews[0].Revoked() {
+		t.Fatalf("撤销记录应保留并标记: %+v", list.Reviews)
+	}
+	if list.Reviews[0].RevokeReason != "看错了" {
+		t.Errorf("撤销原因应记录，得到 %q", list.Reviews[0].RevokeReason)
+	}
+}
+
+// 驳回类结论不写查重库：写进去会让这张票以后被判"已报销过"，语义是错的。
+func TestRejectDoesNotAffectDedup(t *testing.T) {
+	s := testServer(t)
+	h := s.Routes()
+	body, _ := json.Marshal(map[string]any{"case_id": "C01", "decision": "reject",
+		"employee_id": "E3001"})
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
 	if rec.Code != 200 {
-		t.Fatalf("记录复核失败: %d %s", rec.Code, rec.Body.String())
+		t.Fatalf("复核失败: %d", rec.Code)
 	}
-	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("GET", "/api/reviews", nil))
+	if len(s.extra()) != 0 {
+		t.Errorf("驳回结论不应写查重库，实际 %d 条", len(s.extra()))
+	}
+}
+
+// 配额熔断：预算耗尽时拒绝启动审核，且明确指向"转人工"而非降级。
+func TestQuotaBlocksAudit(t *testing.T) {
+	s := testServer(t)
+	q, err := quota.Open(filepath.Join(t.TempDir(), "q.json"), quota.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	q.AddUsage("anonymous", 60) // 超过 $50 预算
+	s.Quota = q
+
+	body, _ := json.Marshal(map[string]any{"case_id": "C01"})
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest("POST", "/api/audit", bytes.NewReader(body)))
+	if rec.Code != 429 {
+		t.Fatalf("超预算应 429，得到 %d：%s", rec.Code, rec.Body.String())
+	}
+	var resp map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &resp)
+	msg, _ := resp["action"].(string)
+	if !strings.Contains(msg, "人工") {
+		t.Errorf("应明确要求转人工（而不是降级），得到 %q", msg)
+	}
+}
+
+// 未超预算时正常放行。
+func TestQuotaAllowsUnderBudget(t *testing.T) {
+	s := testServer(t)
+	q, _ := quota.Open(filepath.Join(t.TempDir(), "q.json"), quota.DefaultConfig())
+	q.AddUsage("anonymous", 10) // $10 / $50
+	s.Quota = q
+	body, _ := json.Marshal(map[string]any{"case_id": "C01"})
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest("POST", "/api/audit", bytes.NewReader(body)))
+	if rec.Code != 200 {
+		t.Fatalf("未超预算应放行，得到 %d", rec.Code)
+	}
+}
+
+// 配额接口返回本周用量与配置。
+func TestQuotaEndpoint(t *testing.T) {
+	s := testServer(t)
+	s.Quota, _ = quota.Open(filepath.Join(t.TempDir(), "q.json"), quota.DefaultConfig())
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest("GET", "/api/quota", nil))
+	var d map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &d)
+	if d["enabled"] != true {
+		t.Fatalf("应报告配额已启用: %v", d)
+	}
+}
+
+// 人员名单接口只给必要信息，且过滤停用账号。
+func TestPeopleEndpoint(t *testing.T) {
+	s := testServer(t)
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest("GET", "/api/people", nil))
 	var d struct {
-		Reviews []ReviewOutcome `json:"reviews"`
+		People []struct {
+			EmployeeID string `json:"employee_id"`
+			Name       string `json:"name"`
+		} `json:"people"`
 	}
 	_ = json.Unmarshal(rec.Body.Bytes(), &d)
-	if len(d.Reviews) != 1 || d.Reviews[0].Note != "人工确认" {
-		t.Fatalf("复核记录错误: %+v", d.Reviews)
-	}
-	if len(s.extra()) != 1 {
-		t.Fatalf("复核结论应写回查重库，实际 %d 条", len(s.extra()))
-	}
-	if s.extra()[0].Status != "approved" {
-		t.Errorf("通过的结论应记为已通过: %s", s.extra()[0].Status)
-	}
-
-	// 非法结论要被拒绝。
-	body, _ = json.Marshal(map[string]any{"case_id": "C01", "decision": "whatever"})
-	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest("POST", "/api/review", bytes.NewReader(body)))
-	if rec.Code != 400 {
-		t.Errorf("非法结论应 400，得到 %d", rec.Code)
+	if len(d.People) != 1 || d.People[0].EmployeeID != "E3001" {
+		t.Fatalf("名单不对: %+v", d.People)
 	}
 }
 

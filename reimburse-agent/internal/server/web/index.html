@@ -106,6 +106,14 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
 .empty{color:var(--faint);font-size:13px;padding:20px;text-align:center}
 .spin{display:inline-block;width:10px;height:10px;border:2px solid #58a6ff44;border-top-color:var(--info);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-1px;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
+.impact{background:#1e1a0c;border:1px solid #4a3b12;color:#e3c07b;font-size:11.5px;
+  padding:6px 9px;border-radius:6px;margin:2px 0 8px;line-height:1.6}
+.rvitem{font-size:11.5px;border-left:2px solid var(--line);padding:4px 8px;margin:4px 0;color:var(--dim)}
+.rvitem.rev{opacity:.55;border-left-color:#6b3030}
+.rvitem .who{color:var(--fg)}
+.rvitem .what{color:var(--warn)}
+.rvitem button{font-size:10.5px;padding:1px 7px;border-radius:4px;border:1px solid var(--line);
+  background:transparent;color:var(--dim);cursor:pointer;margin-left:6px}
 .warnbar{background:#1e1a0c;border:1px solid #4a3b12;color:#e3c07b;font-size:12px;padding:6px 10px;border-radius:6px;margin:6px 0}
 .split{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .split .panel{background:var(--panel2)}
@@ -124,6 +132,7 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
   <span id="m-cl" class="badge"></span>
   <span id="m-tools" class="badge"></span>
   <span style="flex:1"></span>
+  <span id="m-quota" class="badge" title="本周 AI 用量"></span>
   <span id="m-cost" class="badge"></span>
 </header>
 
@@ -151,6 +160,7 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
         <option value="check_company=error">企业核验报错</option>
         <option value="check_history=timeout">历史查重超时</option>
       </select>
+      <select id="whoSel" title="当前操作人（工号）"></select>
       <span style="flex:1"></span>
       <span id="runState" class="muted"></span>
     </div>
@@ -195,7 +205,76 @@ async function boot(){
   const st = await jget("/api/stats");
   $("#m-cost").textContent = `本次运行 ${st.sessions||0} 单 · 成本约 $${(st.cost_usd||0).toFixed(5)}`;
   renderSteps(null);
+  await loadPeople();
+  await loadQuota();
   await loadCases();
+}
+
+// loadPeople 拉工号名单，填充"当前操作人"；没有名单时禁用复核并说明原因。
+async function loadPeople(){
+  try{
+    const d = await jget("/api/people");
+    const sel = $("#whoSel");
+    if(!d.people || d.people.length===0){
+      sel.innerHTML = '<option value="">（未配置人员名单）</option>';
+      sel.disabled = true;
+      return;
+    }
+    sel.innerHTML = '<option value="">选择操作人</option>' +
+      d.people.map(p=>`<option value="${esc(p.employee_id)}" ${p.can_review?"":"data-noreview=1"}>
+        ${esc(p.employee_id)} ${esc(p.name)}${p.can_review?"":"（只读）"}</option>`).join("");
+  }catch(e){ /* 名单接口失败不影响主流程 */ }
+}
+
+// loadQuota 更新顶部配额徽章与颜色。
+async function loadQuota(){
+  try{
+    const d = await jget("/api/quota");
+    const el = $("#m-quota");
+    if(!d.enabled){ el.textContent = "预算：未启用"; el.className="badge"; return; }
+    const st = d.status, cfg = d.config;
+    const pct = (st.ratio*100).toFixed(0);
+    el.textContent = `本周 $${st.used_usd.toFixed(2)} / $${st.budget_usd.toFixed(0)}（${pct}%）`;
+    el.className = "badge " + (st.level==="ok"?"":st.level==="blocked"?"bad":"");
+    el.title = st.level==="blocked"
+      ? "预算已耗尽：自动审核已熔断，单据需转人工"
+      : `预警 ${(cfg.warn_ratio*100).toFixed(0)}% / 严重 ${(cfg.critical_ratio*100).toFixed(0)}% / 熔断 100%`;
+    if(st.blocked){
+      const btn = $("#runBtn");
+      if(btn && !btn.disabled){ btn.disabled = true; btn.title = "本周预算已耗尽"; }
+    }
+  }catch(e){}
+}
+
+// loadReviews 渲染复核记录（含撤销按钮）。
+async function loadReviews(){
+  const box = $("#reviewList");
+  if(!box) return;
+  try{
+    const d = await jget("/api/reviews");
+    if(!d.reviews || d.reviews.length===0){ box.innerHTML = ""; return; }
+    box.innerHTML = '<h3 style="font-size:12px;color:var(--faint);margin:6px 0 4px">复核记录</h3>' +
+      d.reviews.slice(0,6).map(r=>`<div class="rvitem ${r.revoked_at?"rev":""}">
+        <span class="who">${esc(r.id)} · ${esc(r.operator_name||r.operator)}</span>
+        <span class="what">${DEC[r.decision]||r.decision}</span>
+        ${r.revoked_at?`<span style="color:var(--bad)">已撤销（${esc(r.revoked_by_name||r.revoked_by)}：${esc(r.revoke_reason||"")}）</span>`
+          :`<button data-rv="${esc(r.id)}">撤销</button>`}
+        <div style="margin-top:2px">${esc(r.note||"")}</div>
+      </div>`).join("");
+    box.querySelectorAll("button[data-rv]").forEach(b=>{
+      b.onclick = async ()=>{
+        const who = $("#whoSel").value;
+        if(!who){ alert("请先选择操作人"); return; }
+        const reason = prompt("撤销原因（会记入审计）");
+        if(reason===null) return;
+        try{
+          const r = await jpost("/api/review/revoke", {id:b.dataset.rv, reason, employee_id:who});
+          $("#reviewResult").innerHTML = `<div class="warnbar">${esc(r.impact.message)}</div>`;
+          await loadReviews();
+        }catch(e){ alert("撤销失败：" + e.message); }
+      };
+    });
+  }catch(e){}
 }
 
 async function loadCases(){
@@ -359,21 +438,31 @@ function showReport(rep){
     <table class="fieldtable"><thead><tr><th>字段</th><th>合并值</th><th>置信度</th></tr></thead><tbody>${fields}</tbody></table>
     <h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">工具核验</h3>
     ${tools}
-    <h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">人工复核（结论会写回查重库）</h3>
+    <h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">人工复核</h3>
+    <div class="impact">⚠️ 选择「通过」或「按核准金额通过」会把这张发票写入查重库，
+      此后同一张发票会被判为<b>重复报销</b>。写错了可以撤销。</div>
     <input id="reviewNote" placeholder="复核意见（可选）">
     <div class="reviewbtns">
       <button data-d="approve">确认通过</button>
       <button data-d="approve_with_adjustment">按核准金额通过</button>
       <button data-d="need_more_info">退回补材料</button>
       <button data-d="reject">确认驳回</button>
-    </div>`;
+    </div>
+    <div id="reviewResult" style="margin-top:8px"></div>
+    <div id="reviewList" style="margin-top:10px"></div>`;
+  loadReviews();
   $("#result").querySelectorAll(".reviewbtns button").forEach(b=>{
     b.onclick = async ()=>{
+      const who = $("#whoSel").value;
+      if(!who){ alert("请先在工具栏选择操作人（工号）"); return; }
       try{
-        await jpost("/api/review", {case_id:S.sel, claim_no:rep.claim_no, decision:b.dataset.d,
-          note:$("#reviewNote").value, operator:"财务复核"});
+        const r = await jpost("/api/review", {case_id:S.sel, claim_no:rep.claim_no, decision:b.dataset.d,
+          note:$("#reviewNote").value, employee_id:who, decision_before:rep.result.decision});
         b.textContent = "已记录 ✓";
         b.disabled = true;
+        const imp = r.impact || {};
+        $("#reviewResult").innerHTML = `<div class="warnbar">${esc(imp.message||"")}</div>`;
+        await loadReviews();
       }catch(e){ alert("记录失败：" + e.message); }
     };
   });

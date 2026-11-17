@@ -19,7 +19,9 @@ import (
 	"time"
 
 	"reimburse/internal/audit"
+	"reimburse/internal/identity"
 	"reimburse/internal/llm"
+	"reimburse/internal/quota"
 	"reimburse/internal/schema"
 	"reimburse/plugins/reimburse-audit/policy"
 )
@@ -39,6 +41,8 @@ type Session struct {
 	ID      string
 	CaseID  string
 	Started time.Time
+	// QuotaClient 是调用方标识（令牌名），审核完成后按它分桶记账。
+	QuotaClient string
 
 	mu     sync.Mutex
 	events []audit.Event
@@ -64,10 +68,12 @@ type Server struct {
 
 	mu       sync.Mutex
 	sessions map[string]*Session
-	// reviewLog 是人工复核结论，作为"记忆"回写到查重库。
-	reviewLog []ReviewOutcome
-	// world 是查重库的增量：复核通过的结论追加到这里。
-	extraHistory []schema.HistRecord
+	// reviews 是复核结论与查重库回写（支持撤销）。
+	reviews *reviewStore
+	// People 是工号名单；为空时拒绝所有写入类操作（默认拒绝）。
+	People *identity.Registry
+	// Quota 是周预算；为空时不限制。
+	Quota *quota.Store
 	// llmClient 延迟创建，便于测试替换。
 	llmClient *llm.Client
 	// ReplayDir 不为空时，实时调用失败就回放录制；界面会标明"回放"。
@@ -76,23 +82,14 @@ type Server struct {
 	DemoSynthetic bool
 }
 
-// ReviewOutcome 是一条人工复核结论。
-type ReviewOutcome struct {
-	At       time.Time `json:"at"`
-	CaseID   string    `json:"case_id"`
-	ClaimNo  string    `json:"claim_no"`
-	Decision string    `json:"decision"`
-	Note     string    `json:"note"`
-	Operator string    `json:"operator"`
-}
-
 // New 创建服务。
 func New(root string, rf *policy.File, cfg llm.Config) (*Server, error) {
 	cases, err := schema.LoadAll(root)
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{Root: root, Cases: cases, RF: rf, Cfg: cfg, sessions: map[string]*Session{}}
+	s := &Server{Root: root, Cases: cases, RF: rf, Cfg: cfg,
+		sessions: map[string]*Session{}, reviews: newReviewStore()}
 	return s, nil
 }
 
@@ -153,6 +150,10 @@ func (s *Server) Start(c *schema.Case, opt audit.Options, explain string, disabl
 		eng := audit.New(s.RF)
 		rep := audit.Run(eng, ctx, &c.Claim, c.InvoiceText, c.SupportText, ex, rv, opt)
 		sess.finish(rep)
+		// 记账：按调用方分桶，便于报警时定位到人。
+		if s.Quota != nil {
+			s.Quota.Record(sess.QuotaClient, rep.CostUSD, c.ID)
+		}
 	}()
 	return sess
 }
@@ -229,43 +230,64 @@ func (s *Session) subscribe() (chan audit.Event, func()) {
 	}
 }
 
-// AddReview 记录人工复核结论，并把"通过"的结论写进查重库。
+// AddReview 记录人工复核结论，并把"通过"类结论写进查重库。
+//
 // 这是本项目的记忆机制：人纠正过的结论会改变下一次查重的结果。
-func (s *Server) AddReview(r ReviewOutcome) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.reviewLog = append(s.reviewLog, r)
+// 因为会改变业务状态，所以要求：操作人必须是名单里的真实工号，且结论可撤销。
+func (s *Server) AddReview(r ReviewOutcome, history *schema.HistRecord) (ReviewOutcome, error) {
 	c, ok := s.Find(r.CaseID)
 	if !ok {
-		return
+		return ReviewOutcome{}, fmt.Errorf("用例不存在: %s", r.CaseID)
 	}
-	status := schema.HistRejected
+	saved := s.reviews.Add(r)
+
+	// 只有"通过"类结论才写查重库：驳回的结论代表这张票不该报，
+	// 写进去反而会让它以后被判"已报销过"，语义是错的。
 	if r.Decision == policy.Approve || r.Decision == policy.ApproveAdj {
-		status = schema.HistApproved
+		h := *history
+		h.ClaimNo = c.Claim.ClaimNo + "-RV"
+		s.reviews.PutHistory(stubHistory{
+			ClaimNo: h.ClaimNo, InvoiceNo: h.InvoiceNo, ApplicantID: h.ApplicantID,
+			SellerTaxID: h.SellerTaxID, IssueDate: h.IssueDate, AmountFen: h.AmountFen,
+			Category: h.Category, Status: h.Status, SubmitDate: h.SubmitDate,
+		})
+		saved.AffectedHistory = HistoryRef{ClaimNo: h.ClaimNo, InvoiceNo: h.InvoiceNo, Applied: true}
+		// 把回写标记记回记录本身，撤销时按它回滚。
+		s.reviews.UpdateAffected(saved.ID, saved.AffectedHistory)
 	}
-	s.extraHistory = append(s.extraHistory, schema.HistRecord{
-		ClaimNo: c.Claim.ClaimNo + "-RV", InvoiceNo: c.Truth.Invoice.InvoiceNo,
-		ApplicantID: c.Claim.Applicant.EmployeeID, SellerTaxID: c.Truth.Invoice.SellerTaxID,
-		IssueDate: c.Truth.Invoice.IssueDate, AmountFen: c.Truth.Invoice.TotalFen,
-		Category: c.Claim.Category, Status: status, SubmitDate: c.Claim.SubmitDate,
-	})
+	return saved, nil
 }
 
-// Reviews 返回复核记录。
-func (s *Server) Reviews() []ReviewOutcome {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	out := make([]ReviewOutcome, len(s.reviewLog))
-	copy(out, s.reviewLog)
-	return out
+// RevokeReview 撤销一条复核结论：标记撤销并从查重库撤掉对应记录。
+func (s *Server) RevokeReview(id, by, byName, reason string) (ReviewOutcome, error) {
+	rec, already, err := s.reviews.Revoke(id, by, byName, reason)
+	if err != nil {
+		return ReviewOutcome{}, err
+	}
+	if already {
+		return rec, nil
+	}
+	// 回滚查重库。
+	if rec.AffectedHistory.Applied && rec.AffectedHistory.ClaimNo != "" {
+		s.reviews.DropHistory(rec.AffectedHistory.ClaimNo)
+	}
+	return rec, nil
 }
 
-// extra 返回追加的历史记录（复核回写）。
+// Reviews 返回全部复核结论（含已撤销），最近在前。
+func (s *Server) Reviews() []ReviewOutcome { return s.reviews.List() }
+
+// extra 返回回写记录（供工具层做查重）。
 func (s *Server) extra() []schema.HistRecord {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	out := make([]schema.HistRecord, len(s.extraHistory))
-	copy(out, s.extraHistory)
+	stubs := s.reviews.Histories()
+	out := make([]schema.HistRecord, 0, len(stubs))
+	for _, h := range stubs {
+		out = append(out, schema.HistRecord{
+			ClaimNo: h.ClaimNo, InvoiceNo: h.InvoiceNo, ApplicantID: h.ApplicantID,
+			SellerTaxID: h.SellerTaxID, IssueDate: h.IssueDate, AmountFen: h.AmountFen,
+			Category: h.Category, Status: h.Status, SubmitDate: h.SubmitDate,
+		})
+	}
 	return out
 }
 
