@@ -1,0 +1,41 @@
+定位"上传时浏览器连接重置"：不是服务端问题，加请求日志与显式长度检查
+
+现象
+用 Playwright 在浏览器里点「上传并建单」，MCP 报 BROWSER_SESSION_RESET，
+浏览器连接被丢弃；但同样的页面、同样的操作，用 page.evaluate 触发 click()
+有时能成功。服务端日志里一条上传请求都没有。
+
+排除过程（每步都用对照实验）
+- 不带文件的 FormData 也断连 → 不是文件体大小的问题；
+- 同一 FormData 发到 Python 探针服务、httpbin.org 都正常 → 不是 multipart 本身；
+- JSON POST 与 urlencoded POST 到本服务都正常 → 不是 POST 或路由；
+- 极简 Go 服务（同样的 ParseMultipartForm、同样的中间件、同样的 HTTP/1.1
+  keep-alive）连发 10 次全 200 → 不是 Go 的 multipart 解析；
+- 去掉 http.MaxBytesReader 后仍会断 → 它不是必要条件（但它确实会主动断连，
+  在真超限时对客户端不友好，仍按下面的方式改掉了）；
+- 换目录、换端口、换构建参数（-s -w）都复现 → 不是路径、端口或符号表；
+- 只让 evaluate 返回一个 200 字符的字符串、甚至只注册 console 监听，也会断连
+  → 触发条件不止一种，最终定位在 Playwright MCP 这一侧的会话稳定性。
+
+结论
+1. 服务端从未收到那条上传请求（日志与 uploads 目录都是空的），
+   说明请求在浏览器发出阶段就被中断，与本服务的处理逻辑无关。
+2. BROWSER_SESSION_RESET 是 Playwright MCP 的连接管理问题：
+   它在若干情况下（大返回值、注册事件监听、部分 multipart 提交）会丢弃会话。
+   这不是本项目的缺陷，也无法从本项目内修复。
+3. 用户在真实浏览器里手动操作不受影响——上传链路本身是通的，
+   这一点在上一轮已用 evaluate 路径端到端验证过（建单、识别发票号、送审、建任务）。
+
+仍然做了的两处改动（都是真问题，不是为了绕开工具）
+- 去掉 http.MaxBytesReader，改为显式检查 Content-Length 并返回 413。
+  MaxBytesReader 在超限时会直接掐断连接，客户端只能看到"连接被重置"，
+  拿不到任何可读的错误；换成显式 413 后，超限有明确提示与下一步。
+  上限没有放松：ParseMultipartForm 的 maxMemory 与读文件时的 LimitReader 仍在。
+- 上传请求单独打一行日志（路径、Content-Type、长度、耗时）。
+  这次的排查里，"请求到底有没有到服务端"是最关键的一问，
+  但之前的日志看不出来；现在一行就能回答。
+
+验证
+- go build / vet / gofmt 干净，14 个包测试全绿；
+- 上传链路（样例发票 → 建单 → 审核 → 建任务）在 evaluate 路径下仍然通；
+- 超限请求现在返回 413 + 明确提示，而不是断连。

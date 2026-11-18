@@ -1,0 +1,59 @@
+把审核做成能担责的业务流程：身份绑定、状态一致、落盘不留半截
+
+上一轮之后，按"身份绑定 → 复核与任务一致性 → 落盘失败处理 → 去掉 Truth 依赖"推进。
+每一条都对应一个"看起来没事、其实会出事"的地方。
+
+身份只能来自令牌（internal/server）
+- 之前 identify() 优先信 body 里的 employee_id，谁都能填别人的工号，
+  复核就追不到人。现在工号只认令牌绑定（令牌名即工号，一令牌一人），
+  body 与 X-Employee-ID 一律忽略。
+- 本机访问（127.0.0.1、无令牌）用 -local-operator 绑定唯一操作人，
+  不绑定则本机复核同样被拒——默认拒绝，不是默认放行。
+- 配额分桶也不再采信请求头里的自报工号。
+
+启动时序：参数备齐再起 goroutine（internal/server）
+- 之前 Start() 先起 goroutine，调用方才设 TaskID / OnFinish / QuotaClient。
+  审核跑得快时回调还没挂上，任务状态不更新、成本记不到人头上。
+- 新增 SessionOpts 与 startWith()：三个参数在启动前必须就位，
+  这是"转人工后待办不消失"的根因。
+
+复核结论要回落到流程（internal/task、internal/server）
+- 新增 ResolveManual：财务在待人工复核的单上点通过/驳回，任务状态跟着变，
+  待办随之消失；LastDecision 同步更新，不再出现"状态=通过、结论=转人工"。
+- 不是待人工复核的单，复核只记录、不改状态，并如实告知调用方。
+
+落盘失败不留半成功（internal/server/review_store.go）
+- AddWithHistory：复核记录与查重回写在同一临界区、一次落盘，
+  失败整体回滚（序号、记录、查重都退回去）。
+- Revoke / PutHistory / DropHistory / UpdateAffected 同样带回滚，
+  不再吞掉写盘错误。
+- 接口按错误类型返回：落盘失败给 503，参数问题才给 4xx。
+- 审核结论已出但任务同步失败时，报告带 task_sync_error 与失败事件，
+  界面能提示"待办可能不同步"，而不是静默。
+
+查重的两个真问题
+- 查重记录主键按复核记录编号命名（BX…-RV#RV0004）：
+  之前同一张单多次通过都写同一主键，撤销旧的那条会把最新的也删掉，
+  重复报销又能过。
+- 没有发票号时拒绝写入查重：真实票据在模型不可用时抽不出发票号，
+  写进去是条查不出任何东西的空记录，比不写更危险。
+
+去掉 Truth 依赖（internal/schema、internal/llm、cmd/serve）
+- truth.json / world.json 改为可选，Case.HasTruth 标记是否带标准答案。
+- 合成抽取遇到无标准答案的单据直接报错，不编造字段。
+- 启动时校验：-demo-synthetic 下存在无 truth.json 的单据，整进程退出并点名。
+
+并发续审只启动一轮（internal/task、internal/server）
+- 新增 BeginAudit 用状态抢占（Pending → Auditing），连点两次只有一次成功，
+  第二次返回 409。之前靠"补交后状态变 pending"的副作用挡，不可靠。
+- releaseTask：抢占必须有释放路径，审核异常中断时放回待审核可重试。
+
+其他
+- 列表接口的 nil slice 改为空切片，避免界面拿到 null 崩掉。
+- 文档同步：README、delivery、onepager、ui 里"复核记录重启即失"的说法已过时。
+
+验证：go build / vet / gofmt 干净，13 个包测试全绿。
+交付包实测六个场景全过：
+① 转人工→财务通过→待办消失；② 两次通过→撤销旧意见→最新仍挡重复；
+③ 落盘失败→503 且内存与重启后都无半成功；④ 他人工号无法冒名；
+⑤ 连点两次续审只加一轮；⑥ 无 Truth 票据能审核/复核/查重，合成模式拒绝启动。
