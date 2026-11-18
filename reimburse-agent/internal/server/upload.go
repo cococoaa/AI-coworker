@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -287,4 +289,25 @@ func decodeB64(s string) ([]byte, error) {
 // extractInvoiceNo 从发票文本里取号码，只用于展示与查重建档。
 func extractInvoiceNo(text string) string {
 	return upload.FindInvoiceNo(text)
+}
+
+// handleSampleInvoice 返回一份样例发票 PDF，供界面"填入样例"与自己试上传用。
+//
+// 为什么要这个：现场演示时手边未必有合规的电子发票；而且用户想验证上传功能
+// 也需要一个确定可用的文件。样例是合成数据，只用于验证链路，不含真实业务信息。
+func (s *Server) handleSampleInvoice(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		jsonOut(w, map[string]any{"error": "只支持 GET"}, 405)
+		return
+	}
+	path := filepath.Join(s.Root, "samples", "invoice-identity-h.pdf")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		jsonOut(w, map[string]any{"error": "样例发票不可用：" + err.Error()}, 404)
+		return
+	}
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", `attachment; filename="sample-invoice.pdf"`)
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write(b)
 }

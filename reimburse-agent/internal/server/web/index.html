@@ -23,6 +23,9 @@ main{display:grid;grid-template-columns:clamp(280px,26vw,340px) minmax(320px,1fr
 @media (max-width:1000px){main{grid-template-columns:1fr}}
 @media (max-width:700px){header{flex-wrap:wrap;gap:8px}}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+/* 左栏表单可能很长：限制高度并允许滚动，保证按钮始终可达 */
+.panel.left{max-height:calc(100vh - 90px);display:flex;flex-direction:column}
+.panel.left #uploadPane{overflow:auto;flex:1}
 .panel.right{position:sticky;top:74px;max-height:calc(100vh - 90px);display:flex;flex-direction:column}
 .panel.right .body{overflow:auto}
 .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);margin:0;padding:10px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
@@ -131,12 +134,15 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
 .tabs .n{display:inline-block;min-width:16px;padding:0 4px;border-radius:8px;background:#2a2f3a;
   color:var(--dim);font-size:10px;margin-left:4px}
 .tabs button.on .n{background:#1f3346;color:#a8c7fa}
-.upform{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.upform{padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;align-items:start}
+.upform .full{grid-column:1 / -1}
+.upform .actions{grid-column:1 / -1;position:sticky;bottom:0;background:var(--panel);
+  padding:8px 0 2px;display:flex;gap:8px;align-items:center}
 .upform .f{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--faint)}
 .upform .f input,.upform .f select{background:var(--panel2);border:1px solid var(--line);
   color:var(--fg);border-radius:5px;padding:5px 7px;font-size:12px;font-family:inherit}
 .upform .f input[type=file]{padding:3px;font-size:11px}
-.uphint{font-size:11.5px;color:var(--dim);line-height:1.6;padding:8px 10px;
+.uphint{grid-column:1 / -1;font-size:11.5px;color:var(--dim);line-height:1.6;padding:8px 10px;
   background:var(--panel2);border:1px solid var(--line);border-radius:6px}
 .upok{background:#0d1f12;border:1px solid #1d4025;color:#7ee787;font-size:12px;
   padding:8px 10px;border-radius:6px;line-height:1.6}
@@ -190,7 +196,7 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
 </header>
 
 <main>
-  <section class="panel">
+  <section class="panel left">
     <div class="tabs">
       <button id="tabTasks" class="on">进行中 <span class="n" id="taskCount">0</span></button>
       <button id="tabCases">全部单据 <span class="n" id="caseCount">0</span></button>
@@ -218,12 +224,17 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
         <label class="f">到达城市<input id="up_city" placeholder="杭州"></label>
         <label class="f">开始日期<input id="up_start_date" type="date"></label>
         <label class="f">结束日期<input id="up_end_date" type="date"></label>
-        <label class="f">事由<input id="up_purpose" placeholder="客户现场支持"></label>
         <label class="f">申请金额（元）<input id="up_amount" type="number" step="0.01" placeholder="73.00"></label>
-        <label class="f">发票文件（必填）<input id="up_invoice" type="file" accept=".pdf,.txt,application/pdf,text/plain"></label>
-        <label class="f">佐证凭证（可选）<input id="up_support" type="file" accept=".pdf,.txt,application/pdf,text/plain"></label>
-        <button id="upBtn" class="primary" style="margin-top:8px">上传并建单</button>
-        <div id="upResult" style="margin-top:10px"></div>
+        <label class="f full">事由<input id="up_purpose" placeholder="客户现场支持"></label>
+        
+        <label class="f full">发票文件（必填）<input id="up_invoice" type="file" accept=".pdf,.txt,application/pdf,text/plain"></label>
+        <label class="f full">佐证凭证（可选）<input id="up_support" type="file" accept=".pdf,.txt,application/pdf,text/plain"></label>
+        <div class="actions">
+          <button id="upBtn" class="primary">上传并建单</button>
+          <button id="upSample" class="ghost" title="填入一份样例电子发票，用于快速验证链路">用样例发票</button>
+          <span class="muted" id="upStatus"></span>
+        </div>
+        <div id="upResult" class="full"></div>
       </div>
     </div>
     <div id="casePane" style="display:none">
@@ -796,6 +807,10 @@ async function uploadInvoice(){
   btn.disabled = true;
   btn.textContent = "上传中…";
   $("#upResult").innerHTML = "";
+  // 明确告诉用户在传什么、多大：大文件在慢网络下要等几秒，
+  // 没反馈会让人以为按钮坏了而反复点。
+  const kb = Math.round(inv.size/1024);
+  $("#upStatus").textContent = `正在上传 ${inv.name}（${kb} KB）…`;
   try{
     const r = await fetch("/api/upload", {method:"POST", body: fd});
     const d = await r.json();
@@ -820,9 +835,39 @@ async function uploadInvoice(){
   }finally{
     btn.disabled = false;
     btn.textContent = "上传并建单";
+    if($("#upStatus")) $("#upStatus").textContent = "";
   }
 }
 
+// 用样例发票：拉一份 PDF，作为 File 塞进文件框。
+// 走 DataTransfer 而不是让用户手选，方便演示与自测；
+// 也能绕过某些环境里原生文件选择器不可用的问题。
+async function useSampleInvoice(){
+  const st = $("#upStatus");
+  st.textContent = "正在取样例发票…";
+  try{
+    const r = await fetch("/api/sample-invoice");
+    if(!r.ok) throw new Error("样例发票不可用");
+    const blob = await r.blob();
+    const f = new File([blob], "sample-invoice.pdf", {type:"application/pdf"});
+    const dt = new DataTransfer();
+    dt.items.add(f);
+    $("#up_invoice").files = dt.files;
+    st.textContent = `已填入 ${f.name}（${Math.round(f.size/1024)} KB），点「上传并建单」`;
+    // 顺手把必填项填上，减少演示时的输入。
+    if(!$("#up_claim_no").value) $("#up_claim_no").value = "BX26110666";
+    if(!$("#up_applicant_id").value) $("#up_applicant_id").value = "E1001";
+    if(!$("#up_applicant_name").value) $("#up_applicant_name").value = "张伟";
+    if(!$("#up_from_city").value) $("#up_from_city").value = "上海";
+    if(!$("#up_city").value) $("#up_city").value = "杭州";
+    if(!$("#up_purpose").value) $("#up_purpose").value = "客户现场支持";
+    if(!$("#up_amount").value) $("#up_amount").value = "73.00";
+  }catch(e){
+    st.textContent = "取样例失败：" + e.message;
+  }
+}
+
+$("#upSample").onclick = useSampleInvoice;
 $("#upBtn").onclick = uploadInvoice;
 $("#tabTasks").onclick = ()=>switchTab("tasks");
 $("#tabCases").onclick = ()=>switchTab("cases");

@@ -51,6 +51,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/api/stats", s.handleStats)
 	mux.HandleFunc("/api/upload", s.handleUpload)
 	mux.HandleFunc("/api/upload/json", s.handleUploadJSON)
+	mux.HandleFunc("/api/sample-invoice", s.handleSampleInvoice)
 	return logRequests(s.withOperator(mux))
 }
 
