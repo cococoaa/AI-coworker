@@ -54,21 +54,37 @@ if ! git -C "$tmp/studio" diff --cached --quiet; then
   git -C "$tmp/studio" push origin HEAD:master
 fi
 
+published=$(git -C "$tmp/studio" rev-parse HEAD)
+remote=$(git -C "$tmp/studio" ls-remote origin refs/heads/master | cut -f1)
+if [[ "$remote" != "$published" ]]; then
+  echo "Studio master does not match the synchronized commit." >&2
+  exit 1
+fi
+
+info=$(request GET '')
+previous_runtime=$(jq -r '.runtime.created_at // empty' <<< "$info")
+last_status=
+deployment_seen=false
 request POST /deploy >/dev/null
 for attempt in {1..60}; do
   sleep 10
-  info=$(request GET '')
+  if ! info=$(request GET ''); then
+    continue
+  fi
   status=$(jq -r '.runtime.status // .status // empty' <<< "$info")
+  if [[ "$status" != "$last_status" ]]; then
+    echo "Studio status: $status"
+    last_status=$status
+  fi
   case "${status,,}" in
     *fail*|*error*) echo "ModelScope deploy failed: $status" >&2; exit 1 ;;
+    building|deploying|creating|starting) deployment_seen=true ;;
     running)
-      host=$(jq -r '.host // empty' <<< "$info")
-      if [[ "$host" == https://* ]] &&
-        curl --fail --silent --show-error --max-time 15 "${host%/}/login" | grep -q 'REIMBURSE_UI_TOKENS'; then
+      runtime=$(jq -r '.runtime.created_at // empty' <<< "$info")
+      if [[ "$deployment_seen" == true || ( -n "$runtime" && "$runtime" != "$previous_runtime" ) ]]; then
         echo "Studio is running: $studio (GitHub main $commit)"
         exit 0
-      fi
-      ;;
+      fi ;;
   esac
 done
 echo "Timed out waiting for Studio: $studio" >&2
