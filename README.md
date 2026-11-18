@@ -1,5 +1,87 @@
 # 报销审核 AI 同事
 
+## 配置密钥并启动（Windows PowerShell）
+
+先安装 Git 和 Go 1.25 或更高版本，并确保可以联网下载 Go 依赖、访问模型接口。在 PowerShell 中执行下面的命令。
+
+```powershell
+git clone https://github.com/cococoaa/AI-coworker.git
+cd AI-coworker\reimburse-agent
+
+$env:DEEPSEEK_API_KEY = "替换为自己的网关密钥"
+$env:ANTHROPIC_API_KEY = "替换为自己的网关密钥"
+
+go run ./cmd/serve -addr 127.0.0.1:8790 -config config.example.json -data data -mcp-data data/world.json -people people.json -local-operator E3001 -local-demo-operators
+```
+
+已有代码时，直接进入克隆目录中的 `reimburse-agent` 文件夹，再设置环境变量并执行启动命令。首次启动会下载依赖和编译，请等待终端显示监听地址。
+
+启动后，在运行服务的电脑上打开 [http://127.0.0.1:8790](http://127.0.0.1:8790)。
+
+**密钥必须与接口地址匹配。** 当前 `config.example.json` 使用第三方网关 `https://api.openai-next.com`。如果同一把网关密钥支持两个模型，可以给两个变量填写相同的值。使用 DeepSeek、Anthropic 官方密钥或其他网关时，先调整配置文件中对应的 `base_url`、`model` 等参数。
+
+环境变量仅对当前 PowerShell 窗口及其启动的程序生效。修改密钥后，在运行旧服务的窗口按 `Ctrl+C`，再从设置好密钥的窗口启动。密钥通过环境变量提供。
+
+| 启动参数 | 用途 |
+| --- | --- |
+| `-addr 127.0.0.1:8790` | 本机访问地址和端口 |
+| `-config config.example.json` | 模型接口和环境变量名称配置 |
+| `-data data` | 加载仓库中的测试数据 |
+| `-mcp-data data/world.json` | 使用模拟发票、企业和历史记录核验库 |
+| `-people people.json` | 加载人员和权限名单 |
+| `-local-operator E3001` | 将本机操作身份绑定为王会计，支持人工复核；申请人工号在表单中另填 |
+
+需要在本机演示中切换复核人、并为留空的申请单号自动生成演示编号时，可在命令末尾追加 `-local-demo-operators`。
+
+这套启动方式调用真实模型，并使用模拟核验数据。新上传发票是否通过还取决于核验库记录、材料完整性和业务规则。交通报销需同时提供行程凭证。
+
+### 本机运行与远程部署的访问令牌
+
+本机按上面的 `-addr 127.0.0.1:8790` 启动时，系统跳过网页登录令牌校验。其他人克隆仓库后在自己的电脑上使用同样的命令，也可以直接打开页面。
+
+系统根据服务的监听地址决定是否启用登录。监听 `0.0.0.0` 等非回环地址时，必须配置访问令牌。魔搭部署默认监听 `0.0.0.0:7860`，因此会显示“请粘贴访问令牌”的登录页。
+
+| 配置 | 用途 |
+| --- | --- |
+| `DEEPSEEK_API_KEY`、`ANTHROPIC_API_KEY` | 供后端调用模型接口 |
+| `REIMBURSE_UI_TOKENS` | 控制网页登录，并将访问身份绑定到人员名单中的工号 |
+
+**魔搭配置**：在创空间的密文设置中添加 `REIMBURSE_UI_TOKENS`，值使用下面的格式，将占位内容替换为至少16位的随机令牌，并重启服务使配置生效。
+
+```text
+E3001:替换为至少16位随机令牌
+```
+
+`E3001` 对应 `people.json` 中的王会计。登录框只填写冒号后面的令牌内容。
+#### 共享演示登录
+
+打开 [AI-worker 创空间](https://modelscope.cn/studios/zkkwin/AI-worker)，在应用登录框粘贴下面的令牌。
+
+```text
+62010e40f2154004b6034023760f2614
+```
+
+该共享令牌绑定 `E3001`（王会计），具备触发审核和人工复核权限。所有使用者共用这一身份，模型调用会消耗部署者配置的 API 额度。
+
+管理员在创空间密文 `REIMBURSE_UI_TOKENS` 中配置的完整值为
+
+```text
+E3001:62010e40f2154004b6034023760f2614
+```
+
+此登录信息由部署者提供，需与运行中的密文配置一致。令牌更换后，本节中的旧令牌会失效。
+
+**Windows 上允许其他机器访问**：先在同一个 PowerShell 窗口配置模型密钥，再设置访问令牌并启动。
+
+```powershell
+$env:REIMBURSE_UI_TOKENS = "E3001:" + [guid]::NewGuid().ToString("N")
+
+go run ./cmd/serve -addr 0.0.0.0:8790 -config config.example.json -data data -mcp-data data/world.json -people people.json
+```
+
+登录时使用该变量中冒号后的随机字符串。其他电脑通过服务所在电脑的实际 IP 和端口访问，网络和防火墙需要允许该端口。远程访问的身份由令牌绑定，`-local-operator` 仅对本机监听生效，`-local-demo-operators` 仅支持回环地址。
+
+
 > 给一个行业，造一位 AI 同事。这是财务共享中心的那一位：看票、查票、查企业、查重复、对制度，
 > 给出**通过 / 调整后通过 / 退回补材料 / 转人工复核 / 驳回**，并说清依据。
 
@@ -14,28 +96,6 @@
 - 复核结论散落在邮件里，下次遇到同一张票还是从头查
 
 这位 AI 同事的做法是：**它做核查和初判，人只处理真正需要判断的单据。**
-
-## 30 秒跑起来
-
-```
-cd reimburse-agent
-go run ./cmd/serve -addr 127.0.0.1:8790
-```
-
-浏览器打开 http://127.0.0.1:8790，左侧选一张单据 → 点「开始审核」。
-
-配了密钥就走真实模型；没配密钥时需要加 `-demo-synthetic`，用合成数据跑同样的判定链路
-（界面会明确标注"合成演示数据"，且不计成本）。
-
-```
-# 有密钥
-set DEEPSEEK_API_KEY=...
-set ANTHROPIC_API_KEY=...
-go run ./cmd/serve -addr 127.0.0.1:8790
-
-# 无密钥演示
-go run ./cmd/serve -addr 127.0.0.1:8790 -demo-synthetic
-```
 
 ## 魔搭创空间
 
