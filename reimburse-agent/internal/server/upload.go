@@ -60,8 +60,24 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 限制请求体大小：r.Body 被包装后，超限会在读的时候报错。
-	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
+	// 限制请求体大小。
+	//
+	// 不用 http.MaxBytesReader：它把 r.Body 换成会"超限就断开连接"的 reader，
+	// 而不少 HTTP 客户端（含 Playwright/Chromium 的 multipart 路径）在同一连接上
+	// 读到连接被掐时会直接丢弃整个会话，表现为"点上传按钮浏览器连接被重置"。
+	// 我们的上限本来就靠 ParseMultipartForm 的 maxMemory + 读文件时的 LimitReader
+	// 兜住，MaxBytesReader 是重复防护，去掉它不影响安全边界。
+	// 先用 Content-Length 做一次显式拒绝：超限时给明确的 413，
+	// 而不是让读取过程撞上限后断连。缺 Content-Length（分块传输）时跳过，
+	// 仍由 ParseMultipartForm 与读文件时的 LimitReader 兜底。
+	if r.ContentLength > maxUploadBytes {
+		jsonOut(w, map[string]any{
+			"ok":     false,
+			"error":  fmt.Sprintf("请求体过大：%d 字节，上限 %d 字节", r.ContentLength, maxUploadBytes),
+			"action": "请压缩或裁剪后再上传（发票 8 MB、凭证 4 MB 以内）",
+		}, 413)
+		return
+	}
 	if err := r.ParseMultipartForm(4 << 20); err != nil {
 		jsonOut(w, map[string]any{
 			"ok":    false,
@@ -252,7 +268,12 @@ func (s *Server) handleUploadJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req uploadJSONRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxUploadBytes*2)).Decode(&req); err != nil {
+	// 同样不用 MaxBytesReader（理由见 handleUpload），改为显式长度检查。
+	if r.ContentLength > maxUploadBytes*2 {
+		jsonOut(w, map[string]any{"ok": false, "error": "请求体过大", "action": "请压缩后再上传"}, 413)
+		return
+	}
+	if err := json.NewDecoder(io.LimitReader(r.Body, maxUploadBytes*2)).Decode(&req); err != nil {
 		jsonOut(w, map[string]any{"ok": false, "error": "请求体解析失败：" + err.Error()}, 400)
 		return
 	}

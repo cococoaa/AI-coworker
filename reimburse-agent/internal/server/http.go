@@ -75,6 +75,7 @@ func (s *Server) withOperator(next http.Handler) http.Handler {
 // 崩了就返回 500 并写清是哪个路径，让人知道该看哪里。
 func logRequests(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		defer func() {
 			if v := recover(); v != nil {
 				log.Printf("panic %s %s: %v\n%s", r.Method, r.URL.Path, v, debug.Stack())
@@ -82,6 +83,11 @@ func logRequests(next http.Handler) http.Handler {
 			}
 		}()
 		next.ServeHTTP(w, r)
+		// 上传请求单独记一行：排查"点了没反应"时，先确认请求有没有到服务端。
+		if strings.HasPrefix(r.URL.Path, "/api/upload") {
+			log.Printf("upload %s ct=%q len=%d took=%v", r.URL.Path,
+				r.Header.Get("Content-Type"), r.ContentLength, time.Since(start).Round(time.Millisecond))
+		}
 	})
 }
 
