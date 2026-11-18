@@ -37,6 +37,14 @@ go run ./cmd/serve -addr 127.0.0.1:8790
 go run ./cmd/serve -addr 127.0.0.1:8790 -demo-synthetic
 ```
 
+## 魔搭创空间
+
+[AI-worker 创空间](https://modelscope.cn/studios/zkkwin/AI-worker) 由 GitHub Actions 从 `main` 同步到魔搭的 `master`，并以 Docker 部署。可以在 GitHub Actions 手动运行 **Deploy to ModelScope**。
+
+- 在 GitHub 仓库的 Actions secrets 添加 `MODELSCOPE_API_KEY`，使用有权写入创空间的魔搭访问令牌。
+- 在魔搭创空间密文中添加 `REIMBURSE_UI_TOKENS`，格式为 `E3001:<至少 16 字符的随机令牌>`。也可将它同名存入 GitHub Actions secrets，首次部署会自动写入创空间。登录时只填写冒号后的随机令牌。
+- 默认运行合成演示，可审核内置样例。需要真实模型及 PDF 送审时，在创空间设置变量 `REIMBURSE_MODE=live`，并通过密文配置 `ANTHROPIC_API_KEY` 和 `DEEPSEEK_API_KEY`。
+
 ## 一次审核要经过什么
 
 ```

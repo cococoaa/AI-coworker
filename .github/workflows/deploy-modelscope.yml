@@ -1,0 +1,38 @@
+name: Deploy to ModelScope
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: modelscope-ai-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.repository == 'cococoaa/AI-coworker' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build the Studio image
+        run: docker build -t ai-worker:ci .
+      - name: Check the Studio listens on port 7860
+        run: |
+          token=$(openssl rand -hex 24)
+          container=$(docker run --detach -e "REIMBURSE_UI_TOKENS=E3001:$token" -p 127.0.0.1:7860:7860 ai-worker:ci)
+          trap 'docker logs "$container"; docker rm -f "$container"' EXIT
+          curl --retry 15 --retry-connrefused --retry-delay 1 --fail --silent --show-error \
+            --header "Authorization: Bearer $token" http://127.0.0.1:7860/api/meta |
+            jq -e '.provenance.synthetic_enabled == true'
+      - name: Sync main and deploy Docker Studio
+        env:
+          MODELSCOPE_API_KEY: ${{ secrets.MODELSCOPE_API_KEY }}
+          REIMBURSE_UI_TOKENS: ${{ secrets.REIMBURSE_UI_TOKENS }}
+        run: bash deploy/modelscope/publish.sh

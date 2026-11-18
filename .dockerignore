@@ -1,0 +1,14 @@
+**
+!Dockerfile
+!deploy/
+!deploy/modelscope/
+!deploy/modelscope/entrypoint.sh
+!reimburse-agent/
+!reimburse-agent/**
+reimburse-agent/data/uploads/
+reimburse-agent/data/replay/
+reimburse-agent/data/reviews.json
+reimburse-agent/data/tasks.json
+reimburse-agent/data/quota.json
+reimburse-agent/.env*
+reimburse-agent/tokens.txt
