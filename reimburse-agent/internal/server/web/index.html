@@ -18,7 +18,8 @@ header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.3px}
 .badge{font-size:12px;padding:2px 8px;border-radius:10px;border:1px solid var(--line);color:var(--dim)}
 .badge.ok{color:var(--ok);border-color:#1d4025;background:#0d1f12}
 .badge.bad{color:var(--bad);border-color:#5a2321;background:#22100f}
-main{display:grid;grid-template-columns:250px minmax(320px,1fr) 330px;gap:12px;padding:12px;align-items:start}
+main{display:grid;grid-template-columns:clamp(280px,26vw,340px) minmax(320px,1fr) 330px;gap:12px;padding:12px;align-items:start}
+@media (max-width:1280px){main{grid-template-columns:minmax(280px,340px) minmax(300px,1fr) 300px}}
 @media (max-width:1000px){main{grid-template-columns:1fr}}
 @media (max-width:700px){header{flex-wrap:wrap;gap:8px}}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -123,13 +124,24 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
 .reviewbtns button{flex:1;font-size:12px;padding:6px 4px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);cursor:pointer}
 .reviewbtns button:hover{color:var(--fg);border-color:#3b4252}
 /* 任务队列：财务最先要看的是"哪些单卡住了"，不是"有哪些单据" */
-.tabs{display:flex;gap:0;border-bottom:1px solid var(--line)}
-.tabs button{flex:1;background:transparent;border:none;border-bottom:2px solid transparent;
-  color:var(--faint);font-size:12px;padding:9px 4px;cursor:pointer;font-family:inherit}
+.tabs{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--line)}
+.tabs button{flex:1 0 auto;min-width:72px;background:transparent;border:none;border-bottom:2px solid transparent;
+  color:var(--faint);font-size:12px;padding:9px 6px;cursor:pointer;font-family:inherit;white-space:nowrap}
 .tabs button.on{color:var(--fg);border-bottom-color:#1f6feb}
 .tabs .n{display:inline-block;min-width:16px;padding:0 4px;border-radius:8px;background:#2a2f3a;
   color:var(--dim);font-size:10px;margin-left:4px}
 .tabs button.on .n{background:#1f3346;color:#a8c7fa}
+.upform{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.upform .f{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--faint)}
+.upform .f input,.upform .f select{background:var(--panel2);border:1px solid var(--line);
+  color:var(--fg);border-radius:5px;padding:5px 7px;font-size:12px;font-family:inherit}
+.upform .f input[type=file]{padding:3px;font-size:11px}
+.uphint{font-size:11.5px;color:var(--dim);line-height:1.6;padding:8px 10px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:6px}
+.upok{background:#0d1f12;border:1px solid #1d4025;color:#7ee787;font-size:12px;
+  padding:8px 10px;border-radius:6px;line-height:1.6}
+.upbad{background:#22100f;border:1px solid #5a2321;color:#ff9b94;font-size:12px;
+  padding:8px 10px;border-radius:6px;line-height:1.6}
 .taskitem{padding:8px 10px;border-radius:7px;cursor:pointer;border:1px solid transparent;
   border-left:3px solid var(--line)}
 .taskitem:hover{background:var(--panel2)}
@@ -182,10 +194,37 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
     <div class="tabs">
       <button id="tabTasks" class="on">进行中 <span class="n" id="taskCount">0</span></button>
       <button id="tabCases">全部单据 <span class="n" id="caseCount">0</span></button>
+      <button id="tabUpload">上传票据</button>
     </div>
     <div id="taskPane">
       <div class="filters" id="taskFilters"></div>
       <div id="tasks"></div>
+    </div>
+    <div id="uploadPane" style="display:none">
+      <div class="upform">
+        <div class="uphint">上传电子发票（PDF 或文本）与佐证凭证，系统提取文字后建成一张可审核的单据。
+          图片与扫描件需要 OCR，当前不支持。</div>
+        <label class="f">报销单号<input id="up_claim_no" placeholder="BX26110999"></label>
+        <label class="f">申请单号<input id="up_request_no" placeholder="SQ20261118001"></label>
+        <label class="f">类别
+          <select id="up_category">
+            <option value="transport">交通</option>
+            <option value="lodging">住宿</option>
+            <option value="meal">餐饮</option>
+          </select></label>
+        <label class="f">申请人工号<input id="up_applicant_id" placeholder="E1001"></label>
+        <label class="f">申请人姓名<input id="up_applicant_name" placeholder="张伟"></label>
+        <label class="f">出发城市<input id="up_from_city" placeholder="上海"></label>
+        <label class="f">到达城市<input id="up_city" placeholder="杭州"></label>
+        <label class="f">开始日期<input id="up_start_date" type="date"></label>
+        <label class="f">结束日期<input id="up_end_date" type="date"></label>
+        <label class="f">事由<input id="up_purpose" placeholder="客户现场支持"></label>
+        <label class="f">申请金额（元）<input id="up_amount" type="number" step="0.01" placeholder="73.00"></label>
+        <label class="f">发票文件（必填）<input id="up_invoice" type="file" accept=".pdf,.txt,application/pdf,text/plain"></label>
+        <label class="f">佐证凭证（可选）<input id="up_support" type="file" accept=".pdf,.txt,application/pdf,text/plain"></label>
+        <button id="upBtn" class="primary" style="margin-top:8px">上传并建单</button>
+        <div id="upResult" style="margin-top:10px"></div>
+      </div>
     </div>
     <div id="casePane" style="display:none">
       <div class="filters" id="filters"></div>
@@ -716,12 +755,78 @@ function switchTab(t){
   S.tab = t;
   $("#tabTasks").classList.toggle("on", t==="tasks");
   $("#tabCases").classList.toggle("on", t==="cases");
+  $("#tabUpload").classList.toggle("on", t==="upload");
   $("#taskPane").style.display = t==="tasks" ? "" : "none";
   $("#casePane").style.display = t==="cases" ? "" : "none";
-  if(t==="tasks") loadTasks(); else loadCases();
+  $("#uploadPane").style.display = t==="upload" ? "" : "none";
+  if(t==="tasks") loadTasks();
+  else if(t==="cases") loadCases();
 }
+
+// ---- 真实票据上传 ----
+// 上传成功后单据进入「全部单据」，也能直接在任务列表里被审。
+// 界面上要说清楚：提取失败就是失败，不会拿半份文本蒙混过关。
+
+async function uploadInvoice(){
+  const btn = $("#upBtn");
+  const inv = $("#up_invoice").files[0];
+  if(!inv){ $("#upResult").innerHTML = '<div class="upbad">请选择发票文件</div>'; return; }
+  const cat = $("#up_category").value;
+  const emp = $("#up_applicant_id").value.trim();
+  if(!emp){ $("#upResult").innerHTML = '<div class="upbad">请填写申请人工号</div>'; return; }
+
+  const fd = new FormData();
+  const put = (k, v) => { if(v !== undefined && v !== null && String(v) !== "") fd.append(k, v); };
+  put("claim_no", $("#up_claim_no").value.trim());
+  put("request_no", $("#up_request_no").value.trim());
+  put("category", cat);
+  put("applicant_id", emp);
+  put("applicant_name", $("#up_applicant_name").value.trim());
+  put("from_city", $("#up_from_city").value.trim());
+  put("city", $("#up_city").value.trim());
+  put("start_date", $("#up_start_date").value);
+  put("end_date", $("#up_end_date").value);
+  put("purpose", $("#up_purpose").value.trim());
+  const amt = $("#up_amount").value.trim();
+  if(amt){ put("amount_fen", String(Math.round(parseFloat(amt)*100))); }
+  fd.append("invoice", inv);
+  const sup = $("#up_support").files[0];
+  if(sup) fd.append("support", sup);
+
+  btn.disabled = true;
+  btn.textContent = "上传中…";
+  $("#upResult").innerHTML = "";
+  try{
+    const r = await fetch("/api/upload", {method:"POST", body: fd});
+    const d = await r.json();
+    if(!r.ok || !d.ok){
+      // 失败时把"该怎么办"一起显示：用户改不了的问题（扫描件/加密）要明说。
+      $("#upResult").innerHTML = `<div class="upbad">上传失败：${esc(d.error||"未知错误")}
+        ${d.action?`<div style="margin-top:4px;color:var(--dim)">${esc(d.action)}</div>`:""}</div>`;
+      return;
+    }
+    $("#upResult").innerHTML = `<div class="upok">
+      已建单 <b>${esc(d.case_id)}</b><br>
+      发票号码 ${esc(d.invoice_no||"未能识别")} · 提取 ${d.invoice_chars} 字
+      ${d.has_support?"· 佐证凭证已提取":"· 无佐证凭证"}<br>
+      ${(d.warnings||[]).map(w=>`<div style="color:#e3c07b">⚠ ${esc(w)}</div>`).join("")}
+      <div style="margin-top:6px;color:var(--dim)">${esc(d.next||"")}</div></div>`;
+    // 让新单据出现在列表里，并直接选中，省一次点击。
+    await loadCases();
+    await select(d.case_id);
+    switchTab("cases");
+  }catch(e){
+    $("#upResult").innerHTML = `<div class="upbad">上传请求失败：${esc(e.message)}</div>`;
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "上传并建单";
+  }
+}
+
+$("#upBtn").onclick = uploadInvoice;
 $("#tabTasks").onclick = ()=>switchTab("tasks");
 $("#tabCases").onclick = ()=>switchTab("cases");
+$("#tabUpload").onclick = ()=>switchTab("upload");
 boot().catch(e=>{ document.body.insertAdjacentHTML("afterbegin", `<div class="warnbar" style="margin:10px">界面初始化失败：${esc(e.message)}</div>`); });
 </script>
 </body>

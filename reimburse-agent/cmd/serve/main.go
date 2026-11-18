@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"reimburse/internal/quota"
 	"reimburse/internal/server"
 	"reimburse/internal/task"
+	"reimburse/internal/upload"
 	"reimburse/plugins/reimburse-audit/policy"
 )
 
@@ -46,6 +48,7 @@ func main() {
 	perCaseAlert := flag.Float64("per-case-alert", 0.05, "单张单据成本告警线（美元）")
 	seedUsage := flag.Float64("seed-usage", 0, "演示用：预置本周已用金额（美元），用于一键演示熔断")
 	seedClient := flag.String("seed-client", "reviewer", "演示用：预置用量记到哪个调用方名下")
+	uploadDir := flag.String("upload-dir", "", "真实票据上传目录；默认 <data>/uploads。空字符串表示关闭上传")
 	reviewFile := flag.String("review-file", "data/reviews.json", "复核记录文件（落盘，跨重启保留）。空字符串表示只在内存")
 	taskFile := flag.String("task-file", "data/tasks.json", "任务库文件（落盘，跨重启保留）。空字符串表示不启用任务流")
 	demo := flag.Bool("demo-synthetic", false, "无密钥演示模式：模型不可用时用合成抽取，界面会标明「合成」")
@@ -117,6 +120,20 @@ func main() {
 	if st, err := os.Stat(*replayDir); err == nil && st.IsDir() {
 		srv.ReplayDir = *replayDir
 		log.Printf("回放目录 %s 已就绪：优先用真实录制，没有录制才用合成", *replayDir)
+	}
+	// 真实票据上传：默认开，落盘到 <data>/uploads。
+	// 传 -upload-dir - 可关闭（例如纯演示、不允许写入文件的场合）。
+	// 上传的单据没有 truth.json，所以 -demo-synthetic 下会被拒绝审——
+	// 启动时已提示，不会到现场才发现。
+	if *uploadDir != "-" {
+		root := *data
+		up := &upload.Processor{Root: root}
+		srv.Uploader = up
+		log.Printf("票据上传已启用，落盘到 %s", filepath.Join(root, "uploads"))
+		if *demo {
+			log.Printf("注意：当前是合成演示模式，上传的真实票据无法审核" +
+				"（没有标准答案）。要审真实票据请配模型密钥并去掉 -demo-synthetic")
+		}
 	}
 	srv.DemoSynthetic = *demo
 	if *demo {

@@ -31,6 +31,8 @@ import (
 //	GET  /api/reviews          复核记录
 //	GET  /api/meta             运行时信息：模型、规则、工具接入方式、健康状态
 //	GET  /api/stats            本次运行累计统计
+//	POST /api/upload           上传真实票据（multipart），返回可审核的单号
+//	POST /api/upload/json      同上，JSON + base64（脚本用）
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleIndex)
@@ -47,6 +49,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/api/people", s.handlePeople)
 	mux.HandleFunc("/api/meta", s.handleMeta)
 	mux.HandleFunc("/api/stats", s.handleStats)
+	mux.HandleFunc("/api/upload", s.handleUpload)
+	mux.HandleFunc("/api/upload/json", s.handleUploadJSON)
 	return logRequests(s.withOperator(mux))
 }
 
@@ -106,13 +110,35 @@ func (s *Server) handleCase(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, map[string]any{"error": "用例不存在: " + id}, 404)
 		return
 	}
-	jsonOut(w, map[string]any{
+	out := map[string]any{
 		"id": c.ID, "claim": c.Claim, "invoice": c.InvoiceText, "support": c.SupportText,
 		"title": c.Truth.Title, "tags": c.Truth.Tags,
+		// 上传的票据没有标准答案：标题与标签要自己造，不能显示空白。
+		"uploaded": !c.HasTruth,
+	}
+	if !c.HasTruth {
+		out["title"] = uploadedTitle(c)
+		out["tags"] = []string{c.Claim.Category, "uploaded"}
+	} else {
 		// 标准答案默认不由前端展示，但提供给"对照"按钮使用。
-		"expected": map[string]any{"decision": c.Truth.Decision, "hits": c.Truth.Hits,
-			"approved_fen": c.Truth.ApprovedFen},
-	}, 200)
+		out["expected"] = map[string]any{"decision": c.Truth.Decision, "hits": c.Truth.Hits,
+			"approved_fen": c.Truth.ApprovedFen}
+	}
+	jsonOut(w, out, 200)
+}
+
+// uploadedTitle 给上传的单据造一个可读标题。
+// 没有标准答案就没有现成标题，但界面上不能是空白。
+func uploadedTitle(c *schema.Case) string {
+	cat := map[string]string{"transport": "交通", "lodging": "住宿", "meal": "餐饮"}[c.Claim.Category]
+	if cat == "" {
+		cat = c.Claim.Category
+	}
+	title := "上传票据 · " + cat
+	if c.Claim.ClaimNo != "" {
+		title += " · " + c.Claim.ClaimNo
+	}
+	return title
 }
 
 // auditRequest 是启动审核的请求体。所有开关随请求记录，事后可复现。

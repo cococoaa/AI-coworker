@@ -24,6 +24,7 @@ import (
 	"reimburse/internal/quota"
 	"reimburse/internal/schema"
 	"reimburse/internal/task"
+	"reimburse/internal/upload"
 	"reimburse/plugins/reimburse-audit/policy"
 )
 
@@ -91,6 +92,8 @@ type Server struct {
 	ReplayDir string
 	// DemoSynthetic 为真时，连录制都没有就用合成抽取。只在无密钥演示时开启。
 	DemoSynthetic bool
+	// Uploader 处理真实票据上传；为空时不接受上传。
+	Uploader *upload.Processor
 	// LocalOperator 是本机（未启用令牌）访问时绑定的工号。
 	//
 	// 为什么需要：监听 127.0.0.1 时不走令牌鉴权，请求上下文里没有身份，
@@ -115,10 +118,32 @@ func New(root string, rf *policy.File, cfg llm.Config) (*Server, error) {
 func (s *Server) Index() []CaseIndex {
 	out := make([]CaseIndex, 0, len(s.Cases))
 	for _, c := range s.Cases {
-		out = append(out, CaseIndex{ID: c.ID, Title: c.Truth.Title, Category: c.Claim.Category,
-			Tags: c.Truth.Tags, ExpectedDecision: c.Truth.Decision})
+		title, tags, expected := c.Truth.Title, c.Truth.Tags, c.Truth.Decision
+		if !c.HasTruth {
+			// 上传的票据没有标准答案：标题要自己造，也不该有"期望结论"。
+			title, tags, expected = uploadedTitle(c), []string{c.Claim.Category, "uploaded"}, ""
+		}
+		out = append(out, CaseIndex{ID: c.ID, Title: title, Category: c.Claim.Category,
+			Tags: tags, ExpectedDecision: expected})
 	}
 	return out
+}
+
+// AddCase 把一条新单据加入内存，使其可被审核。
+//
+// 上传的单据走这里进来：它们不在启动时加载的测试集里，
+// 但与测试集结构一致，所以审核、任务、查重全部原样复用。
+// 并发安全：审核会并发读 s.Cases。
+func (s *Server) AddCase(c *schema.Case) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i, old := range s.Cases {
+		if old.ID == c.ID {
+			s.Cases[i] = c // 同编号覆盖（重复上传同一张）
+			return
+		}
+	}
+	s.Cases = append(s.Cases, c)
 }
 
 // Find 按编号取用例。
