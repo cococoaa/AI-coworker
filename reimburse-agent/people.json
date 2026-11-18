@@ -1,0 +1,34 @@
+{
+  "_说明": "工号名单。令牌只证明'这个部署允许访问'，工号才是身份——复核结论会写进查重库，必须追到人。can_review=true 才能提交/撤销复核结论；can_audit=true 才能触发审核。文件不存在或为空时，所有复核写入一律拒绝（默认拒绝）。",
+  "people": [
+    {
+      "employee_id": "E3001",
+      "name": "王会计",
+      "dept": "财务共享中心",
+      "can_review": true,
+      "can_audit": true
+    },
+    {
+      "employee_id": "E3002",
+      "name": "周主管",
+      "dept": "财务部",
+      "can_review": true,
+      "can_audit": true
+    },
+    {
+      "employee_id": "E3003",
+      "name": "内审-只读",
+      "dept": "审计部",
+      "can_review": false,
+      "can_audit": true
+    },
+    {
+      "employee_id": "E3004",
+      "name": "张三（已离职）",
+      "dept": "财务共享中心",
+      "can_review": true,
+      "can_audit": false,
+      "disabled": true
+    }
+  ]
+}

@@ -9,7 +9,7 @@ dist/
 *.tmp
 *.swp
 
-# 密钥与本地配置（仓库里只允许 config.example.json）
+# 密钥与本地配置
 config.json
 tokens.txt
 .env
@@ -23,6 +23,8 @@ tokens.txt
 .DS_Store
 quota.json
 people.json
+# 人员名单用于跨机器复现授权配置；其他 people.json 默认仍忽略。
+!reimburse-agent/people.json
 # 运行时数据：任务库与复核记录由程序自己创建，仓库里不带状态
 tasks.json
 reviews.json
