@@ -25,7 +25,7 @@ func handlerFor(t *testing.T) (http.Handler, *mcpauth.Verifier) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
-	return uiAuth(v, next), v
+	return uiAuth(v, next, false), v
 }
 
 func TestBrowserGetsLoginPage(t *testing.T) {
@@ -120,6 +120,38 @@ func TestBearerStillWorks(t *testing.T) {
 	h.ServeHTTP(rec, req)
 	if rec.Code != 200 {
 		t.Fatalf("Bearer 应放行，得到 %d", rec.Code)
+	}
+}
+
+func TestModelScopeProxyUsesAppCredentials(t *testing.T) {
+	_, verifier := handlerFor(t)
+	h := uiAuth(verifier, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}), true)
+	for _, tc := range []struct {
+		name, cookie, header string
+		want                 int
+	}{
+		{name: "proxy credential only", want: http.StatusUnauthorized},
+		{name: "application cookie", cookie: testToken, want: http.StatusOK},
+		{name: "application header", header: testToken, want: http.StatusOK},
+		{name: "wrong cookie", cookie: "incorrect-token", want: http.StatusUnauthorized},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/api/meta", nil)
+			req.Header.Set("Authorization", "Bearer modelscope-proxy-token")
+			if tc.cookie != "" {
+				req.AddCookie(&http.Cookie{Name: cookieName, Value: tc.cookie})
+			}
+			if tc.header != "" {
+				req.Header.Set("X-Reimburse-Token", tc.header)
+			}
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+			if rec.Code != tc.want {
+				t.Fatalf("got HTTP %d, want %d", rec.Code, tc.want)
+			}
+		})
 	}
 }
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-set -- -addr 0.0.0.0:7860 -config config.example.json
+set -- -addr 0.0.0.0:7860 -config config.example.json -modelscope-proxy
 case "${REIMBURSE_MODE:-demo}" in
   demo) set -- "$@" -demo-synthetic -upload-dir - ;;
   live) ;;

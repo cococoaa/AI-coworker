@@ -40,6 +40,7 @@ func main() {
 	mcpURL := flag.String("mcp-url", "", "连接独立 MCP 服务；为空则在进程内起 MCP 服务")
 	mcpData := flag.String("mcp-data", "", "进程内 MCP 服务的数据文件；为空则用当前单据的库")
 	uiToken := flag.String("ui-token-file", "", "界面访问令牌文件；监听非本机地址时必须提供")
+	modelScopeProxy := flag.Bool("modelscope-proxy", false, "魔搭反向代理模式，使用安全会话 Cookie 或 X-Reimburse-Token")
 	replayDir := flag.String("replay", "data/replay", "录制回放目录：实时调用失败时用它兜底；不存在则忽略")
 	localOp := flag.String("local-operator", "", "本机（127.0.0.1，无令牌）访问时绑定的工号；须在人员名单里。留空则本机复核也被拒绝")
 	localDemoOperators := flag.Bool("local-demo-operators", false, "仅本机演示：允许在人员名单中切换复核人")
@@ -203,7 +204,7 @@ func main() {
 			log.Fatalf("界面令牌配置无效: %v", err)
 		}
 		log.Printf("界面鉴权已启用，令牌 %v（%s）", v.Names(), src)
-		handler = uiAuth(v, handler)
+		handler = uiAuth(v, handler, *modelScopeProxy)
 	}
 
 	hs := &http.Server{Addr: *addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second}
@@ -232,12 +233,19 @@ func main() {
 //   - Cookie 是 HttpOnly + SameSite=Strict，前端脚本读不到；
 //   - 仍然支持 Authorization: Bearer，供脚本与 curl 使用；
 //   - 登录失败只回一句"令牌不正确"，不暴露令牌名或指纹。
-func uiAuth(v *mcpauth.Verifier, next http.Handler) http.Handler {
+func uiAuth(v *mcpauth.Verifier, next http.Handler, modelScopeProxy bool) http.Handler {
 	guarded := v.Middleware()(next)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/login" {
-			serveLogin(v, guarded, w, r)
+			serveLogin(guarded, w, r, modelScopeProxy)
 			return
+		}
+		if modelScopeProxy {
+			// ModelScope reserves Authorization for its own proxy credentials.
+			r.Header.Del("Authorization")
+			if token := strings.TrimSpace(r.Header.Get("X-Reimburse-Token")); token != "" {
+				r.Header.Set("Authorization", "Bearer "+token)
+			}
 		}
 		if r.Header.Get("Authorization") == "" {
 			if c, err := r.Cookie(cookieName); err == nil && c.Value != "" {
@@ -260,7 +268,7 @@ func acceptsHTML(r *http.Request) bool {
 }
 
 // serveLogin 处理登录页与登录提交。
-func serveLogin(v *mcpauth.Verifier, guarded http.Handler, w http.ResponseWriter, r *http.Request) {
+func serveLogin(guarded http.Handler, w http.ResponseWriter, r *http.Request, secureCookie bool) {
 	if r.Method == http.MethodPost {
 		tok := strings.TrimSpace(r.FormValue("token"))
 		if tok == "" {
@@ -278,7 +286,7 @@ func serveLogin(v *mcpauth.Verifier, guarded http.Handler, w http.ResponseWriter
 			return
 		}
 		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: tok, Path: "/",
-			HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: 12 * 3600})
+			HttpOnly: true, Secure: secureCookie, SameSite: http.SameSiteStrictMode, MaxAge: 12 * 3600})
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}

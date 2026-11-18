@@ -29,7 +29,7 @@ jobs:
           container=$(docker run --detach -e "REIMBURSE_UI_TOKENS=E3001:$token" -p 127.0.0.1:7860:7860 ai-worker:ci)
           trap 'docker logs "$container"; docker rm -f "$container"' EXIT
           curl --retry 15 --retry-all-errors --retry-delay 1 --max-time 5 --fail --silent --show-error \
-            --header "Authorization: Bearer $token" http://127.0.0.1:7860/api/meta |
+            --header "X-Reimburse-Token: $token" http://127.0.0.1:7860/api/meta |
             jq -e '.provenance.synthetic_enabled == true'
       - name: Sync main and deploy Docker Studio
         env:
