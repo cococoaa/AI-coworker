@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"reimburse/internal/mcpauth"
 	"reimburse/internal/schema"
 	"reimburse/internal/upload"
 )
@@ -34,10 +35,12 @@ const maxUploadBytes = 12 << 20 // 12 MB：发票 8 MB + 凭证 4 MB，留点表
 
 // uploadResponse 是上传成功的返回。
 type uploadResponse struct {
-	OK       bool   `json:"ok"`
-	CaseID   string `json:"case_id"`
-	Title    string `json:"title"`
-	Category string `json:"category"`
+	OK        bool   `json:"ok"`
+	CaseID    string `json:"case_id"`
+	ClaimNo   string `json:"claim_no"`
+	RequestNo string `json:"request_no,omitempty"`
+	Title     string `json:"title"`
+	Category  string `json:"category"`
 	// InvoiceNo 是识别出的发票号码，界面直接展示给用户确认。
 	InvoiceNo string `json:"invoice_no,omitempty"`
 	// InvoiceChars 是提取到的字符数，便于判断提取质量。
@@ -55,9 +58,48 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, map[string]any{"error": "只支持 POST"}, 405)
 		return
 	}
+	if !s.parseUploadForm(w, r) {
+		return
+	}
+	defer r.MultipartForm.RemoveAll()
+	req, err := s.uploadRequestFromForm(r)
+	if err != nil {
+		jsonOut(w, map[string]any{"ok": false, "error": err.Error()}, 400)
+		return
+	}
+	req.DemoRequestNo = s.demoUpload(r)
+	s.doUpload(w, req)
+}
+
+func (s *Server) demoUpload(r *http.Request) bool {
+	return (s.LocalDemoOperators || s.DemoSynthetic) && isLoopbackAddr(r.RemoteAddr) && mcpauth.TokenInfoFrom(r.Context()) == nil
+}
+
+func (s *Server) handleUploadPreview(w http.ResponseWriter, r *http.Request) {
+	if !s.parseUploadForm(w, r) {
+		return
+	}
+	defer r.MultipartForm.RemoveAll()
+	var req upload.Request
+	if err := readUploadFiles(r, &req); err != nil {
+		jsonOut(w, map[string]any{"error": err.Error()}, 400)
+		return
+	}
+	p, err := upload.Inspect(req)
+	if err != nil {
+		jsonOut(w, map[string]any{"error": err.Error()}, 400)
+		return
+	}
+	jsonOut(w, struct {
+		upload.Preview
+		DemoRequestNo bool `json:"demo_request_no"`
+	}{p, s.demoUpload(r)}, 200)
+}
+
+func (s *Server) parseUploadForm(w http.ResponseWriter, r *http.Request) bool {
 	if s.Uploader == nil {
 		jsonOut(w, map[string]any{"error": "未启用上传（服务启动时未配置上传目录）"}, 501)
-		return
+		return false
 	}
 
 	// 限制请求体大小。
@@ -76,7 +118,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 			"error":  fmt.Sprintf("请求体过大：%d 字节，上限 %d 字节", r.ContentLength, maxUploadBytes),
 			"action": "请压缩或裁剪后再上传（发票 8 MB、凭证 4 MB 以内）",
 		}, 413)
-		return
+		return false
 	}
 	if err := r.ParseMultipartForm(4 << 20); err != nil {
 		jsonOut(w, map[string]any{
@@ -84,15 +126,9 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 			"error": "解析上传内容失败：" + err.Error(),
 			"hint":  "单次上传不超过 12 MB；发票 PDF 建议 8 MB 以内",
 		}, 400)
-		return
+		return false
 	}
-
-	req, err := s.uploadRequestFromForm(r)
-	if err != nil {
-		jsonOut(w, map[string]any{"ok": false, "error": err.Error()}, 400)
-		return
-	}
-	s.doUpload(w, req)
+	return true
 }
 
 // uploadRequestFromForm 从表单里取报销单与两个文件。
@@ -134,9 +170,16 @@ func (s *Server) uploadRequestFromForm(r *http.Request) (upload.Request, error) 
 		}
 	}
 
+	if err := readUploadFiles(r, &req); err != nil {
+		return req, err
+	}
+	return req, validateClaimBasics(req.Claim)
+}
+
+func readUploadFiles(r *http.Request, req *upload.Request) error {
 	inv, invName, err := readUploadPart(r, "invoice")
 	if err != nil {
-		return req, err
+		return err
 	}
 	req.InvoiceData, req.InvoiceName = inv, invName
 
@@ -145,10 +188,7 @@ func (s *Server) uploadRequestFromForm(r *http.Request) (upload.Request, error) 
 		req.SupportData, req.SupportName = sup, supName
 	}
 
-	if err := validateClaimBasics(req.Claim); err != nil {
-		return req, err
-	}
-	return req, nil
+	return nil
 }
 
 // readUploadPart 读一个必填文件。
@@ -236,6 +276,7 @@ func (s *Server) doUpload(w http.ResponseWriter, req upload.Request) {
 	}
 	out := uploadResponse{
 		OK: true, CaseID: c.ID,
+		ClaimNo: c.Claim.ClaimNo, RequestNo: c.Claim.RequestNo,
 		Title:        "上传票据 " + c.Claim.ClaimNo,
 		Category:     c.Claim.Category,
 		InvoiceNo:    invNo,
@@ -293,6 +334,7 @@ func (s *Server) handleUploadJSON(w http.ResponseWriter, r *http.Request) {
 	s.doUpload(w, upload.Request{
 		Claim: req.Claim, InvoiceName: req.InvoiceName, InvoiceData: inv,
 		SupportName: req.SupportName, SupportData: sup,
+		DemoRequestNo: s.demoUpload(r),
 	})
 }
 

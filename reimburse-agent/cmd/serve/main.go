@@ -42,6 +42,7 @@ func main() {
 	uiToken := flag.String("ui-token-file", "", "界面访问令牌文件；监听非本机地址时必须提供")
 	replayDir := flag.String("replay", "data/replay", "录制回放目录：实时调用失败时用它兜底；不存在则忽略")
 	localOp := flag.String("local-operator", "", "本机（127.0.0.1，无令牌）访问时绑定的工号；须在人员名单里。留空则本机复核也被拒绝")
+	localDemoOperators := flag.Bool("local-demo-operators", false, "仅本机演示：允许在人员名单中切换复核人")
 	peoplePath := flag.String("people", "people.json", "人员名单（工号 + 姓名 + 权限）。缺省文件不存在时：拒绝一切复核写入")
 	quotaPath := flag.String("quota-file", "data/quota.json", "用量配额文件（落盘，跨重启保留）")
 	weeklyBudget := flag.Float64("weekly-budget", 50, "周预算（美元）。0 表示不限制")
@@ -53,6 +54,9 @@ func main() {
 	taskFile := flag.String("task-file", "data/tasks.json", "任务库文件（落盘，跨重启保留）。空字符串表示不启用任务流")
 	demo := flag.Bool("demo-synthetic", false, "无密钥演示模式：模型不可用时用合成抽取，界面会标明「合成」")
 	flag.Parse()
+	if flag.NArg() > 0 {
+		log.Fatalf("无法识别启动参数 %q。请检查是否把换行用的反斜杠一起传给了程序；可将命令写在一行。", flag.Arg(0))
+	}
 
 	rf, err := loadRules(*rulesPath)
 	if err != nil {
@@ -110,6 +114,12 @@ func main() {
 			log.Fatalf("打开任务库: %v", err)
 		}
 		srv.Tasks = tk
+		if err := srv.RepairReviewApprovals(); err != nil {
+			log.Fatalf("同步人工复核通过状态: %v", err)
+		}
+		if err := srv.RepairSupplementTasks(); err != nil {
+			log.Fatalf("修复待补材料任务: %v", err)
+		}
 		log.Printf("任务库 %s（已有 %d 张单）", *taskFile, len(tk.List()))
 	}
 	if *seedUsage > 0 {
@@ -141,7 +151,7 @@ func main() {
 		// 与其等现场点开才发现，不如启动时就报清楚是哪几条。
 		var noTruth []string
 		for _, c := range srv.Cases {
-			if !c.HasTruth {
+			if !c.HasTruth && !strings.HasPrefix(c.ID, "UP") {
 				noTruth = append(noTruth, c.ID)
 			}
 		}
@@ -171,6 +181,13 @@ func main() {
 		} else {
 			log.Printf("忽略 -local-operator：监听 %s 属于跨机访问，身份一律以令牌绑定为准", *addr)
 		}
+	}
+
+	if *localDemoOperators {
+		if !isLoopback(*addr) {
+			log.Fatal("-local-demo-operators 仅允许监听回环地址")
+		}
+		srv.LocalDemoOperators = true
 	}
 
 	handler := srv.Routes()

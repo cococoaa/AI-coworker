@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"mime"
 	"net/http"
 	"runtime/debug"
 	"strconv"
@@ -36,9 +37,12 @@ import (
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleIndex)
+	mux.HandleFunc("GET /ui/chat.js", serveChatJS)
+	mux.HandleFunc("GET /ui/review-tools.js", serveReviewToolsJS)
 	mux.HandleFunc("/api/cases", s.handleCases)
 	mux.HandleFunc("/api/cases/", s.handleCase)
 	mux.HandleFunc("/api/audit", s.handleAudit)
+	mux.HandleFunc("POST /api/chat", s.handleChat)
 	mux.HandleFunc("/api/audit/", s.handleAuditSub)
 	mux.HandleFunc("/api/review", s.handleReview)
 	mux.HandleFunc("/api/review/revoke", s.handleRevoke)
@@ -50,8 +54,14 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/api/meta", s.handleMeta)
 	mux.HandleFunc("/api/stats", s.handleStats)
 	mux.HandleFunc("/api/upload", s.handleUpload)
+	mux.HandleFunc("POST /api/upload/preview", s.handleUploadPreview)
 	mux.HandleFunc("/api/upload/json", s.handleUploadJSON)
 	mux.HandleFunc("/api/sample-invoice", s.handleSampleInvoice)
+	if demo := newContestDemo(s); demo != nil {
+		mux.HandleFunc("POST /api/contest/compare", demo.compare)
+		mux.HandleFunc("POST /api/contest/start", demo.start)
+		mux.HandleFunc("POST /api/contest/resume", demo.resume)
+	}
 	return logRequests(s.withOperator(mux))
 }
 
@@ -172,6 +182,10 @@ func (s *Server) handleAudit(w http.ResponseWriter, r *http.Request) {
 	c, ok := s.Find(req.CaseID)
 	if !ok {
 		jsonOut(w, map[string]any{"error": "用例不存在: " + req.CaseID}, 404)
+		return
+	}
+	if _, approved := s.activeApproval(c.ID); approved {
+		jsonOut(w, map[string]any{"error": "这张单已人工复核通过。如果需要重新审核，请先撤销该通过结论。"}, 409)
 		return
 	}
 	// 配额预检：预算耗尽时熔断，不再自动判定。
@@ -340,17 +354,20 @@ type reviewRequest struct {
 	SessionID string `json:"session_id"`
 }
 
-// identify 取当前操作人的工号。
-//
-// 工号只能来自令牌绑定（令牌名即工号，一令牌一人）。
-// 请求体里的 employee_id、请求头 X-Employee-ID 一律不再采信——
-// 谁都能在 body 里写一个别人的工号，那样"复核可追溯到人"就是一句空话。
-//
-// 本机未启用鉴权（没有令牌）时返回空串，调用方据此拒绝写入（默认拒绝）。
-// bodyID 参数保留只为兼容调用点，不再参与判断。
-func identify(bodyID string, r *http.Request) string {
-	_ = bodyID // 明确忽略：不接受调用方自报身份
-	return operatorOfRequest(r)
+// reviewOperator uses the bound identity unless local demo selection is enabled.
+func (s *Server) reviewOperator(bodyID string, r *http.Request) string {
+	if !s.canChooseDemoOperator(r) || strings.TrimSpace(bodyID) == "" {
+		return operatorOfRequest(r)
+	}
+	// A browser can only send cross-origin JSON after a successful preflight.
+	if contentType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || contentType != "application/json" {
+		return ""
+	}
+	return strings.TrimSpace(bodyID)
+}
+
+func (s *Server) canChooseDemoOperator(r *http.Request) bool {
+	return s.LocalDemoOperators && isLoopbackAddr(r.RemoteAddr) && mcpauth.TokenInfoFrom(r.Context()) == nil
 }
 
 // operatorOfRequest 从请求上下文里取操作人。
@@ -409,7 +426,7 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 身份校验：工号必须在名单里，且有复核权限。默认拒绝。
-	id := identify(req.EmployeeID, r)
+	id := s.reviewOperator(req.EmployeeID, r)
 	if s.People == nil {
 		jsonOut(w, map[string]any{"error": "服务未配置人员名单，拒绝写入复核结论"}, 403)
 		return
@@ -449,6 +466,10 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 	}
 	saved, err := s.AddReview(rv, hist)
 	if err != nil {
+		if saved.ID != "" {
+			jsonOut(w, map[string]any{"ok": false, "error": err.Error(), "review": saved}, 503)
+			return
+		}
 		// 落盘失败要给 5xx：这不是用户输错，是服务没存下来。
 		// 返回 400 会让人以为"改个参数就能重试"，实际要修的是磁盘。
 		code := 400
@@ -470,7 +491,11 @@ func (s *Server) handleReview(w http.ResponseWriter, r *http.Request) {
 	}
 	if s.Tasks != nil {
 		if tk, ok := s.Tasks.FindByCase(req.CaseID); ok {
-			if updated, terr := s.Tasks.ResolveManual(tk.ID, req.Decision, person.EmployeeID, req.Note); terr == nil {
+			if isApproval(req.Decision) {
+				out["task"] = tk
+				out["task_state"] = tk.State
+				out["waiting_on"] = tk.State.WaitingOn()
+			} else if updated, terr := s.Tasks.ResolveManual(tk.ID, req.Decision, person.EmployeeID, req.Note); terr == nil {
 				out["task"] = updated
 				out["task_state"] = updated.State
 				out["waiting_on"] = updated.State.WaitingOn()
@@ -622,7 +647,7 @@ func (s *Server) handleRevoke(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, map[string]any{"error": "服务未配置人员名单，拒绝撤销"}, 403)
 		return
 	}
-	person, err := s.People.Authenticate(identify(req.EmployeeID, r), "review")
+	person, err := s.People.Authenticate(s.reviewOperator(req.EmployeeID, r), "review")
 	if err != nil {
 		jsonOut(w, map[string]any{"error": err.Error()}, 403)
 		return
@@ -651,7 +676,33 @@ func (s *Server) handleRevoke(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleReviews(w http.ResponseWriter, r *http.Request) {
-	jsonOut(w, map[string]any{"reviews": s.Reviews()}, 200)
+	type row struct {
+		ReviewOutcome
+		TaskID    string `json:"task_id,omitempty"`
+		CaseTitle string `json:"case_title,omitempty"`
+		Category  string `json:"category,omitempty"`
+	}
+
+	records := s.Reviews()
+	rows := make([]row, 0, len(records))
+	taskIDs := make(map[string]string)
+	if s.Tasks != nil {
+		for _, t := range s.Tasks.List() {
+			taskIDs[t.CaseID] = t.ID
+		}
+	}
+	for _, review := range records {
+		item := row{ReviewOutcome: review, TaskID: taskIDs[review.CaseID]}
+		if c, ok := s.Find(review.CaseID); ok {
+			if item.ClaimNo == "" {
+				item.ClaimNo = c.Claim.ClaimNo
+			}
+			item.Category = c.Claim.Category
+			item.CaseTitle = c.Truth.Title
+		}
+		rows = append(rows, item)
+	}
+	jsonOut(w, map[string]any{"reviews": rows}, 200)
 }
 
 // handleTasks 是待办列表：财务最关心"今天有多少要处理、卡在谁那里"。
@@ -696,6 +747,9 @@ func taskBrief(t *task.Task, now time.Time) map[string]any {
 		"last_decision": t.LastDecision, "last_approved_fen": t.LastApprovedFen,
 		"rounds": len(t.Runs), "updated_at": t.UpdatedAt,
 	}
+	if t.State == task.Approved && t.ApprovalReviewID != "" {
+		out["state_label"] = "人工复核通过"
+	}
 	if n := len(t.Outstanding()); n > 0 {
 		out["outstanding"] = n
 		var labels []string
@@ -734,7 +788,18 @@ func (s *Server) handleTaskSub(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, map[string]any{"error": "任务不存在: " + id}, 404)
 		return
 	}
-	jsonOut(w, map[string]any{"task": t, "waiting_on": t.State.WaitingOn()}, 200)
+	out := map[string]any{"task": t, "waiting_on": t.State.WaitingOn()}
+	if c, ok := s.Find(t.CaseID); ok {
+		effective, _ := applySupplements(c, t)
+		out["category"] = effective.Claim.Category
+		for _, item := range t.Outstanding() {
+			if item.Key == "claim_info" {
+				out["claim_fields"] = claimSupplementFields(audit.ToJudgeClaim(&effective.Claim))
+				break
+			}
+		}
+	}
+	jsonOut(w, out, 200)
 }
 
 // resubmitRequest 是补交材料的请求体。
@@ -759,12 +824,24 @@ func (s *Server) handleResubmit(w http.ResponseWriter, r *http.Request, id strin
 		jsonOut(w, map[string]any{"error": "请求体解析失败"}, 400)
 		return
 	}
-	by := identify(req.EmployeeID, r)
+	by := operatorOfRequest(r)
 	if strings.TrimSpace(req.Content) == "" {
 		jsonOut(w, map[string]any{
 			"error": "补交材料缺少正文（content）。只登记文件名而不给内容，续审时判定不会变化。",
 		}, 400)
 		return
+	}
+	if req.Kind == "claim_info" {
+		if current, ok := s.Tasks.Get(id); ok {
+			if c, found := s.Find(current.CaseID); found {
+				effective, _ := applySupplements(c, current)
+				applyKeyValues(&effective.Claim, req.Content)
+				if missing := claimInfoHint(audit.ToJudgeClaim(&effective.Claim)); missing != "" {
+					jsonOut(w, map[string]any{"error": "还需填写：" + missing}, 400)
+					return
+				}
+			}
+		}
 	}
 	t, dup, err := s.Tasks.ResubmitIdem(id, req.Kind, req.Name, by, req.Note, req.Content)
 	if err != nil {
@@ -794,23 +871,15 @@ func (s *Server) handleReaudit(w http.ResponseWriter, r *http.Request, id string
 		jsonOut(w, map[string]any{"error": "任务不存在: " + id}, 404)
 		return
 	}
-	if t.State != task.Pending && t.State != task.NeedMore {
-		jsonOut(w, map[string]any{
-			"error": fmt.Sprintf("当前状态「%s」不能续审（只有待审核或待补材料可以）", t.State.Label()),
-		}, 400)
+	if _, approved := s.activeApproval(t.CaseID); approved {
+		jsonOut(w, map[string]any{"error": "这张单已人工复核通过。如果需要重新审核，请先撤销该通过结论。"}, 409)
 		return
 	}
-	if !t.ResolvedAll() {
+	if t.State == task.NeedMore || !t.ResolvedAll() {
 		jsonOut(w, map[string]any{
-			"error":       "材料还没补齐，不能续审",
+			"error":       "请先提交待补材料，再续审",
 			"outstanding": t.Outstanding(),
 		}, 400)
-		return
-	}
-	// 抢占任务：连续点两次续审时，只有第一次能切开这个状态。
-	// 放在建会话之前——先抢再跑，否则两次请求都会读到"待审核"。
-	if _, err := s.Tasks.BeginAudit(t.ID); err != nil {
-		jsonOut(w, map[string]any{"error": err.Error(), "task_id": t.ID}, 409)
 		return
 	}
 	c, ok := s.Find(t.CaseID)
@@ -828,6 +897,12 @@ func (s *Server) handleReaudit(w http.ResponseWriter, r *http.Request, id string
 			}, 429)
 			return
 		}
+	}
+	// 抢占成功后使用在锁内取得的最新附件版本。
+	t, err := s.Tasks.BeginAudit(t.ID)
+	if err != nil {
+		jsonOut(w, map[string]any{"error": err.Error(), "task_id": id}, 409)
+		return
 	}
 	sess := s.StartTaskAs(c, t, audit.Options{Injected: map[string]audit.Status{}}, "", nil, quotaClient(r))
 	jsonOut(w, map[string]any{
@@ -848,7 +923,7 @@ func nextStep(t *task.Task) map[string]any {
 		return map[string]any{
 			"action": "wait_for_employee",
 			"who":    "报销人",
-			"message": fmt.Sprintf("还需补交 %d 项：%s。补交后点「续审」重新审核，已核验的结果会复用。",
+			"message": fmt.Sprintf("还需补交 %d 项：%s。补交后点「续审」重新审核。",
 				len(keys), strings.Join(labels, "、")),
 			"remaining": keys,
 		}
@@ -856,7 +931,7 @@ func nextStep(t *task.Task) map[string]any {
 		if len(t.Runs) > 0 {
 			return map[string]any{
 				"action": "reaudit", "who": "系统",
-				"message": "材料已补齐，可以续审。续审会复用以核验结果，只重查受影响的判定项。",
+				"message": "材料已补齐，可以用更新后的材料重新审核。",
 			}
 		}
 		return map[string]any{"action": "audit", "who": "系统", "message": "尚未审核，可以开始审核。"}
@@ -911,7 +986,10 @@ func (s *Server) handlePeople(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, brief{p.EmployeeID, p.Name, p.Dept, p.CanReview, p.CanAudit})
 	}
-	jsonOut(w, map[string]any{"people": out}, 200)
+	jsonOut(w, map[string]any{
+		"people": out, "operator_id": operatorOfRequest(r),
+		"can_choose_reviewer": s.canChooseDemoOperator(r),
+	}, 200)
 }
 
 // handleMeta 汇总界面顶部要显示的信息：模型、密钥是否就绪、工具接入方式、规则版本。
@@ -930,16 +1008,18 @@ func (s *Server) handleMeta(w http.ResponseWriter, r *http.Request) {
 			{"claude", s.Cfg.Claude.Model, clReady, fmt.Sprintf("$%.2f/$%.2f 每百万 token", s.Cfg.Claude.PriceIn, s.Cfg.Claude.PriceOut)},
 		},
 		"rules": map[string]any{"policy": s.RF.Policy.Name, "version": s.RF.Policy.Version,
-			"count": len(s.RF.Rules), "checks": len(s.RF.AllCheckIDs())},
+			"deadline_days": s.RF.Params.ReimburseDeadlineDays,
+			"count":         len(s.RF.Rules), "checks": len(s.RF.AllCheckIDs())},
 		"tools": map[string]any{"mode": toolsMode(s.MCPURL), "url": s.MCPURL,
 			"names": []string{"verify_invoice", "check_company", "check_history"}},
 		"cases": len(s.Cases),
 		// 真实性分两件事，不能混为一谈：模型是不是真在跑，核验数据是不是真业务接口。
 		"provenance": map[string]any{
-			"model_live":   dsReady || clReady,
-			"tool_backend": "mock",
-			"invoice_docs": "synthetic",
-			"note":         "模型调用真实；票据为合成数据；三个核验工具读的是本地 mock 库，不是真实税局或工商接口",
+			"synthetic_enabled": s.DemoSynthetic,
+			"model_live":        dsReady || clReady,
+			"tool_backend":      "mock",
+			"invoice_docs":      "synthetic",
+			"note":              "模型调用真实；票据为合成数据；三个核验工具读的是本地 mock 库，不是真实税局或工商接口",
 		},
 	}, 200)
 }

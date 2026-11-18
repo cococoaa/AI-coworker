@@ -55,6 +55,7 @@ type Claim struct {
 	Purpose             string      `json:"purpose"`
 	AmountFen           int64       `json:"amount_fen"`
 	SubmitDate          string      `json:"submit_date"`
+	LateExplanation     string      `json:"-"`
 	InternalCount       int         `json:"internal_count,omitempty"`
 	ExternalCount       int         `json:"external_count,omitempty"`
 	ExternalOrg         string      `json:"external_org,omitempty"`

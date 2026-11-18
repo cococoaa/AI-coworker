@@ -254,6 +254,7 @@ func (s *reviewStore) AddWithHistory(r ReviewOutcome, put *stubHistory) (ReviewO
 		// 查重记录按复核记录编号命名：同一张单多次通过各留一条，
 		// 撤销其中一条只撤自己那条，不会把别人的一起删掉。
 		put.ClaimNo = put.ClaimNo + "#" + r.ID
+		r.AffectedHistory = HistoryRef{ClaimNo: put.ClaimNo, InvoiceNo: put.InvoiceNo, Applied: true}
 	}
 	if r.At.IsZero() {
 		r.At = s.now()

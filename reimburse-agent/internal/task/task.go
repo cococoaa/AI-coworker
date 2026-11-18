@@ -214,7 +214,8 @@ type Event struct {
 
 // Task 是一张报销单的任务。
 type Task struct {
-	ID string `json:"id"`
+	ID               string `json:"id"`
+	ApprovalReviewID string `json:"approval_review_id,omitempty"`
 	// CaseID 关联到用例/单据编号。
 	CaseID string `json:"case_id"`
 	// ClaimNo 是报销单号。
@@ -669,6 +670,9 @@ func (s *Store) BeginAudit(id string) (*Task, error) {
 	return s.Update(id, func(t *Task) error {
 		switch t.State {
 		case Pending:
+			if !t.ResolvedAll() {
+				return fmt.Errorf("材料还没补齐，不能续审")
+			}
 			t.State = Auditing
 			t.Events = append(t.Events, Event{At: s.now(), Kind: "auditing", Detail: "开始审核"})
 			return nil
@@ -687,6 +691,44 @@ func (s *Store) BeginAudit(id string) (*Task, error) {
 // 财务会以为自己没点成功，再点一次。这是"复核结论没有回落到流程"的典型表现。
 //
 // 返回的错误用于区分"状态不允许"，由调用方决定是提示还是忽略。
+func (s *Store) ApplyReviewApproval(id, reviewID, decision, by, note string, amountFen int64) (*Task, error) {
+	return s.Update(id, func(t *Task) error {
+		if t.State == Withdrawn {
+			return fmt.Errorf("任务 %s 已撤销，不能确认通过", t.ID)
+		}
+		t.State = Approved
+		t.LastDecision = decision
+		if decision == "approve" {
+			t.LastApprovedFen = amountFen
+		}
+		t.ApprovalReviewID = reviewID
+		t.Missing = nil
+		t.NextRecheck = nil
+		detail := "人工复核通过（" + reviewID + "）"
+		if note != "" {
+			detail += "：" + note
+		}
+		t.Events = append(t.Events, Event{At: s.now(), Kind: "reviewed", Detail: detail, By: by})
+		return nil
+	})
+}
+
+func (s *Store) ReopenAfterApprovalRevoked(id, reviewID, by string) error {
+	_, err := s.Update(id, func(t *Task) error {
+		if t.ApprovalReviewID != reviewID || t.State != Approved {
+			return nil
+		}
+		t.ApprovalReviewID = ""
+		t.State = Pending
+		t.LastDecision = ""
+		t.LastApprovedFen = 0
+		t.Events = append(t.Events, Event{At: s.now(), Kind: "review_revoked",
+			Detail: "人工通过已撤销，待重新审核（" + reviewID + "）", By: by})
+		return nil
+	})
+	return err
+}
+
 func (s *Store) ResolveManual(id, decision, by, note string) (*Task, error) {
 	return s.Update(id, func(t *Task) error {
 		if t.State != NeedManual {
@@ -707,8 +749,18 @@ func (s *Store) ResolveManual(id, decision, by, note string) (*Task, error) {
 			return nil
 		}
 		t.State = next
-		t.Missing = nil
-		t.NextRecheck = nil
+		if next == NeedMore {
+			request := strings.TrimSpace(note)
+			if request == "" {
+				request = "请补充财务要求的材料或情况说明"
+			}
+			t.Missing = append(t.Outstanding(), MissingItem{
+				Key: "finance_request", Label: "财务要求的补充材料", Kind: "explanation", Reason: request,
+			})
+		} else {
+			t.Missing = nil
+			t.NextRecheck = nil
+		}
 		// 最近结论跟着人定的走：否则会出现"状态=初审通过、结论=转人工复核"
 		// 这种自相矛盾的记录，界面上看的人会以为数据错了。
 		t.LastDecision = decision

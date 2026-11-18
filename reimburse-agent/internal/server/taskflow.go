@@ -71,33 +71,9 @@ func buildMissing(in *audit.Input, res *audit.Result) []task.MissingItem {
 		out = append(out, item)
 	}
 
-	// 2) 材料层面：缺佐证凭证整份。
-	if res.FieldStatus != nil {
-		// R14-a 命中说明缺佐证凭证。
-		if hasHit(res.Hits, "R14-a") {
-			label := supportLabel(in.Claim.Category)
-			k := "support"
-			if !seen[k] {
-				seen[k] = true
-				out = append(out, task.MissingItem{
-					Key: k, Label: label, Kind: KindAttachment,
-					Reason: "缺少对应类别的" + label + "，无法核对费用日期与金额",
-					Clause: "第2.7条",
-				})
-			}
-		}
-	}
-
-	// 3) 报销单信息不全（缺申请单号、事由、人数等）。
-	if hasHit(res.Hits, "R14-b") {
-		if !seen["claim_info"] {
-			seen["claim_info"] = true
-			out = append(out, task.MissingItem{
-				Key: "claim_info", Label: "报销单信息", Kind: KindAbsent,
-				Reason: "报销单必填项不全（申请单号 / 事由 / 人数 / 招待对象单位之一）",
-				Clause: "第2.7条",
-				Hint:   claimInfoHint(in.Claim),
-			})
+	for _, item := range ruleSupplementItems(in.Claim, res.Hits) {
+		if !seen[item.Key] {
+			out = append(out, item)
 		}
 	}
 
@@ -193,31 +169,41 @@ func clauseForSkipped(in *audit.Input, res *audit.Result, f judge.FieldName) str
 
 // claimInfoHint 按单据类别给出"该补哪些键"，并说明格式。
 // 不列全所有键：只列这张单真正缺的，避免让人以为要填一堆无关字段。
-func claimInfoHint(cl *judge.Claim) string {
-	type kv struct{ k, label string }
-	var need []kv
+type claimSupplementField struct {
+	Key      string `json:"key"`
+	Label    string `json:"label"`
+	Help     string `json:"help"`
+	Required bool   `json:"required"`
+}
+
+func claimSupplementFields(cl *judge.Claim) []claimSupplementField {
+	var need []claimSupplementField
 	if cl.RequestNo == "" {
-		need = append(need, kv{"request_no", "申请单号"})
+		need = append(need, claimSupplementField{"request_no", "申请单号", "从已提交的出差、用餐或招待申请中复制审批单号。", true})
 	}
 	if cl.Category == "meal" {
 		if cl.Purpose == "" {
-			need = append(need, kv{"purpose", "事由"})
+			need = append(need, claimSupplementField{"purpose", "用餐事由", "简要写明本次工作用餐或接待的目的。", true})
 		}
 		if cl.InternalCount+cl.ExternalCount == 0 {
-			need = append(need, kv{"internal_count", "内部人数"})
-		}
-		if cl.ExternalCount > 0 && cl.ExternalOrg == "" {
-			need = append(need, kv{"external_org", "招待对象单位"})
+			need = append(need, claimSupplementField{"internal_count", "内部人数", "填实际参加的本单位人数，没有填 0。", true},
+				claimSupplementField{"external_count", "外部人数", "填实际参加的外部人员人数，没有填 0。", true})
+			if cl.ExternalOrg == "" {
+				need = append(need, claimSupplementField{"external_org", "招待对象单位", "有外部人员参加时填写对方单位全称。", false})
+			}
+		} else if cl.ExternalCount > 0 && cl.ExternalOrg == "" {
+			need = append(need, claimSupplementField{"external_org", "招待对象单位", "填写参加人员所在的外部单位全称。", true})
 		}
 	}
-	if len(need) == 0 {
-		return "按 键=值 逐行填写"
-	}
+	return need
+}
+
+func claimInfoHint(cl *judge.Claim) string {
 	var parts []string
-	for _, n := range need {
-		parts = append(parts, fmt.Sprintf("%s=…（%s）", n.k, n.label))
+	for _, field := range claimSupplementFields(cl) {
+		parts = append(parts, field.Label)
 	}
-	return "逐行填写：" + strings.Join(parts, "　")
+	return strings.Join(parts, "、")
 }
 
 func supportLabel(cat string) string {
@@ -260,6 +246,13 @@ func convertRecheck(r *task.Recheck) *audit.RecheckPlan {
 //   - 记录本批次的成本与耗时（便于算"这张单花了多少钱"）
 func (s *Server) applyReportToTask(taskID string, rep *audit.Report, c *schema.Case) {
 	if s.Tasks == nil || rep == nil || rep.Result == nil {
+		return
+	}
+	s.reviewMu.Lock()
+	defer s.reviewMu.Unlock()
+	if _, approved := s.activeApproval(c.ID); approved {
+		rep.TaskID = taskID
+		rep.Warnings = append(rep.Warnings, "本次初审期间，财务已确认通过，任务以人工复核结论为准。")
 		return
 	}
 	in := &audit.Input{

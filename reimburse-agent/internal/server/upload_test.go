@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"mime/multipart"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -60,6 +62,69 @@ const invoiceText = "电子发票（普通发票）\n发票号码：261572931459
 	"开票日期：2026年11月10日\n购买方名称：星河科技有限公司\n" +
 	"销售方名称：东海铁路客运服务有限公司\n价税合计（小写）¥73.00\n"
 
+func TestUploadPreviewAndGeneratedNumbers(t *testing.T) {
+	s := newUploadServer(t)
+	h := s.Routes()
+	post := func(path string, fields map[string]string, text string) *httptest.ResponseRecorder {
+		t.Helper()
+		body, ct := multipartBody(t, fields, "invoice.txt", []byte(text))
+		rec := httptest.NewRecorder()
+		req := localReq("POST", path, body)
+		req.Header.Set("Content-Type", ct)
+		h.ServeHTTP(rec, req)
+		if rec.Code != 200 {
+			t.Fatalf("%s returned %d: %s", path, rec.Code, rec.Body.String())
+		}
+		return rec
+	}
+	s.LocalDemoOperators = true
+	text := invoiceText + "*运输服务*铁路客运\n申请单号：SQ20261118001\n"
+	var p struct {
+		upload.Preview
+		DemoRequestNo bool `json:"demo_request_no"`
+	}
+	rec := post("/api/upload/preview", nil, text)
+	if err := json.Unmarshal(rec.Body.Bytes(), &p); err != nil {
+		t.Fatal(err)
+	}
+	if p.InvoiceNo != "26157293145980000777" || p.Category != "transport" ||
+		p.AmountFen == nil || *p.AmountFen != 7300 || p.RequestNo != "SQ20261118001" || !p.DemoRequestNo {
+		t.Fatalf("unexpected preview: %+v", p)
+	}
+	if _, err := os.Stat(filepath.Join(s.Uploader.Root, "uploads")); !os.IsNotExist(err) {
+		t.Fatalf("preview must not create an upload: %v", err)
+	}
+
+	fields := map[string]string{"category": "transport", "applicant_id": "E1001"}
+	save := func() uploadResponse {
+		t.Helper()
+		rec := post("/api/upload", fields, text)
+		var up uploadResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &up); err != nil {
+			t.Fatal(err)
+		}
+		return up
+	}
+	first := save()
+	if !strings.HasPrefix(first.ClaimNo, "BX") || !strings.HasPrefix(first.RequestNo, "SQ-DEMO-") {
+		t.Fatalf("unexpected generated numbers: %+v", first)
+	}
+	fields["request_no"] = p.RequestNo
+	second := save()
+	if first.CaseID == second.CaseID || first.ClaimNo == second.ClaimNo || second.RequestNo != p.RequestNo {
+		t.Fatalf("colliding or overwritten numbers: %+v %+v", first, second)
+	}
+	c, ok := s.Find(first.CaseID)
+	if !ok || c.Claim.ClaimNo != first.ClaimNo || c.Claim.RequestNo != first.RequestNo {
+		t.Fatal("generated numbers must be attached to the saved case")
+	}
+	s.LocalDemoOperators = false
+	delete(fields, "request_no")
+	if ordinary := save(); ordinary.RequestNo != "" {
+		t.Fatalf("unexpected request number outside demo: %s", ordinary.RequestNo)
+	}
+}
+
 // 上传成功后：单据能查、有标题、没有标准答案、能直接送审。
 func TestUploadCreatesAuditableCase(t *testing.T) {
 	s := newUploadServer(t)
@@ -111,6 +176,19 @@ func TestUploadCreatesAuditableCase(t *testing.T) {
 	}
 	if detail["uploaded"] != true {
 		t.Error("应标记为上传的单据")
+	}
+
+	root := s.Uploader.Root
+	if err := os.Mkdir(filepath.Join(root, "cases"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	restarted, err := New(root, s.RF, s.Cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored, ok := restarted.Find(up.CaseID)
+	if !ok || restored.HasTruth || restored.Claim.ClaimNo != c.Claim.ClaimNo || restored.InvoiceText != c.InvoiceText {
+		t.Fatal("重启后应恢复上传单据与发票文本")
 	}
 }
 

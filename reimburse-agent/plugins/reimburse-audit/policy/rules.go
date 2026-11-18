@@ -13,6 +13,9 @@ import (
 //go:embed policy.json
 var embedded []byte
 
+//go:embed presets/municipal-soe/policy.json
+var municipalDemo []byte
+
 // 判定结果类型，按 decision_priority 从严到宽排序。
 const (
 	Approve      = "approve"
@@ -114,6 +117,9 @@ type File struct {
 
 // Load 读取内嵌的规则表。
 func Load() (*File, error) { return parse(embedded) }
+
+// LoadMunicipalDemo loads the packaged, fictional municipal enterprise policy.
+func LoadMunicipalDemo() (*File, error) { return parse(municipalDemo) }
 
 // LoadFile 读取外部规则表文件（便于现场调整阈值）。
 func LoadFile(path string) (*File, error) {

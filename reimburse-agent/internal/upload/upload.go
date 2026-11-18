@@ -69,6 +69,8 @@ type Request struct {
 	// SupportName / SupportData 是佐证凭证（可选）。
 	SupportName string
 	SupportData []byte
+	// DemoRequestNo permits a generated application reference for local demonstrations.
+	DemoRequestNo bool
 }
 
 // Result 是上传结果。
@@ -87,6 +89,30 @@ type Processor struct {
 	Now func() time.Time
 }
 
+// LoadSaved restores uploaded cases from their persisted claim and extracted texts.
+func LoadSaved(root string) ([]*schema.Case, error) {
+	dir := filepath.Join(root, "uploads")
+	entries, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var cases []*schema.Case
+	for _, entry := range entries {
+		if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "UP") {
+			continue
+		}
+		c, err := schema.LoadCase(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			return nil, err
+		}
+		cases = append(cases, c)
+	}
+	return cases, nil
+}
+
 // Save 处理一次上传：提取文本、校验、落盘、返回可审单据。
 //
 // 返回值里的 Case 已经可以直接交给 Server 审核——它与测试集里的用例
@@ -97,40 +123,9 @@ func (p *Processor) Save(req Request) (*Result, error) {
 		now = p.Now
 	}
 
-	if len(req.InvoiceData) == 0 {
-		return nil, fmt.Errorf("%w：发票文件", ErrEmpty)
-	}
-	if len(req.InvoiceData) > MaxBytes {
-		return nil, fmt.Errorf("%w：发票 %d 字节，上限 %d", ErrTooLarge, len(req.InvoiceData), MaxBytes)
-	}
-
-	invoiceText, err := extract(req.InvoiceName, req.InvoiceData, KindInvoice)
+	invoiceText, supportText, _, warnings, err := readDocuments(req)
 	if err != nil {
-		return nil, fmt.Errorf("发票：%w", err)
-	}
-
-	// 发票号是审核的命门：没有它，查验与查重都做不了。
-	// 这里只检查"能否看出号码"，不解析整张票——字段提取交给模型。
-	if !looksLikeInvoice(invoiceText) {
-		return nil, fmt.Errorf("%w（提取到的文本里没有可识别的发票号码）", ErrNoInvoiceNo)
-	}
-
-	res := &Result{}
-
-	var supportText string
-	if len(req.SupportData) > 0 {
-		if len(req.SupportData) > MaxSupportBytes {
-			return nil, fmt.Errorf("%w：佐证凭证 %d 字节，上限 %d",
-				ErrTooLarge, len(req.SupportData), MaxSupportBytes)
-		}
-		supportText, err = extract(req.SupportName, req.SupportData, KindSupport)
-		if err != nil {
-			// 佐证凭证读不出来时继续跑：主判定仍能做，缺件由规则层按"缺材料"处理。
-			// 但不能静默——要在结果里说清楚，否则用户以为凭证已经算进去了。
-			res.Warnings = append(res.Warnings,
-				"佐证凭证无法提取文本（"+err.Error()+"），本次按「未提供佐证凭证」处理")
-			supportText = ""
-		}
+		return nil, err
 	}
 
 	// 组装单据。
@@ -139,7 +134,22 @@ func (p *Processor) Save(req Request) (*Result, error) {
 	if supportText != "" {
 		cl.Attachments.SupportFile = "support.txt"
 	}
-	id := caseID(now())
+	root := filepath.Join(p.Root, "uploads")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		return nil, fmt.Errorf("创建上传目录失败: %w", err)
+	}
+	dir, err := os.MkdirTemp(root, "UP"+now().Format("20060102150405")+"-")
+	if err != nil {
+		return nil, fmt.Errorf("创建单据目录失败: %w", err)
+	}
+	id := filepath.Base(dir)
+	suffix := strings.TrimPrefix(id, "UP")
+	if strings.TrimSpace(cl.ClaimNo) == "" {
+		cl.ClaimNo = "BX" + suffix
+	}
+	if strings.TrimSpace(cl.RequestNo) == "" && req.DemoRequestNo {
+		cl.RequestNo = "SQ-DEMO-" + suffix
+	}
 	c := &schema.Case{
 		ID:          id,
 		Claim:       cl,
@@ -148,11 +158,11 @@ func (p *Processor) Save(req Request) (*Result, error) {
 		HasTruth:    false, // 上传的票据没有标准答案
 	}
 
-	if err := p.write(c); err != nil {
+	if err := write(dir, c); err != nil {
+		_ = os.RemoveAll(dir)
 		return nil, err
 	}
-	res.Case = c
-	return res, nil
+	return &Result{Case: c, Warnings: warnings}, nil
 }
 
 // extract 按扩展名/内容挑选提取方式。
@@ -211,18 +221,8 @@ func looksLikeInvoice(text string) bool {
 	return strings.Contains(text, "发票") && regexp.MustCompile(`[0-9]{8,}`).MatchString(text)
 }
 
-// caseID 生成单据编号：上传的单据用 UP 前缀，与测试集 C 前缀区分开。
-// 带时间戳，避免同一秒多次上传互相覆盖。
-func caseID(t time.Time) string {
-	return "UP" + t.Format("20060102150405")
-}
-
 // write 把单据写成用例目录。
-func (p *Processor) write(c *schema.Case) error {
-	dir := filepath.Join(p.Root, "uploads", c.ID)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("创建上传目录失败: %w", err)
-	}
+func write(dir string, c *schema.Case) error {
 	if err := schema.WriteJSON(filepath.Join(dir, "claim.json"), c.Claim); err != nil {
 		return fmt.Errorf("写入报销单失败: %w", err)
 	}

@@ -473,6 +473,26 @@ func (e *Engine) Judge(in *Input) *Result {
 	res.ClaimAmountFen = cl.AmountFen
 	res.FieldStatus = v.statuses
 	res.Decision = e.RF.Aggregate(res.Hits)
+	if strings.TrimSpace(cl.LateExplanation) != "" {
+		var otherHits []string
+		explained := false
+		for i := range res.Findings {
+			f := &res.Findings[i]
+			if f.CheckID == "R07-a" && f.Outcome == policy.NeedMoreInfo {
+				f.Outcome = policy.ManualReview
+				f.Reason += "，已补交超期说明，待财务确认"
+				explained = true
+			} else {
+				otherHits = append(otherHits, f.CheckID)
+			}
+		}
+		if explained {
+			res.Decision = e.RF.Aggregate(otherHits)
+			if res.Decision == policy.Approve || res.Decision == policy.ApproveAdj {
+				res.Decision = policy.ManualReview
+			}
+		}
+	}
 	switch res.Decision {
 	case policy.Approve:
 		res.ApprovedFen = cl.AmountFen

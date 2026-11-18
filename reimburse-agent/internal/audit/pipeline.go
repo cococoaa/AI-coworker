@@ -207,10 +207,7 @@ func Run(e *Engine, ctx context.Context, cl *schema.Claim, invoiceText, supportT
 	// 续审时把"复用什么、重查什么"摆出来，让读者一眼看出这不是从头再跑一遍。
 	if opt.Recheck != nil {
 		detail := opt.ResumeHint
-		if opt.Recheck.Reason != "" {
-			detail += "。" + opt.Recheck.Reason
-		}
-		emit(StagePlan, "stage", "续审计划", detail, opt.Recheck, 0)
+		emit(StagePlan, "stage", "续审计划", detail, nil, 0)
 	}
 
 	// 1. 双模型抽取

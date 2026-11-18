@@ -65,10 +65,11 @@ type Session struct {
 
 // Server 是 HTTP 服务。
 type Server struct {
-	Root  string // 数据根目录（含 cases/）
-	Cases []*schema.Case
-	RF    *policy.File
-	Cfg   llm.Config
+	reviewMu sync.Mutex
+	Root     string // 数据根目录（含 cases/）
+	Cases    []*schema.Case
+	RF       *policy.File
+	Cfg      llm.Config
 	// MCPURL 为空表示进程内起 MCP 服务；否则连远程服务。
 	MCPURL string
 	// MCPToken 是连远程 MCP 服务用的令牌。
@@ -101,6 +102,8 @@ type Server struct {
 	// 而不是"没身份也放行"。跨机部署必须配令牌，本字段不生效。
 	// 空串表示本机也不绑定身份（此时本机复核同样被拒绝）。
 	LocalOperator string
+	// LocalDemoOperators lets loopback requests choose a reviewer for local rehearsals.
+	LocalDemoOperators bool
 }
 
 // New 创建服务。
@@ -109,7 +112,11 @@ func New(root string, rf *policy.File, cfg llm.Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{Root: root, Cases: cases, RF: rf, Cfg: cfg,
+	uploads, err := upload.LoadSaved(root)
+	if err != nil {
+		return nil, fmt.Errorf("加载已上传单据: %w", err)
+	}
+	s := &Server{Root: root, Cases: append(cases, uploads...), RF: rf, Cfg: cfg,
 		sessions: map[string]*Session{}, reviews: newReviewStore()}
 	return s, nil
 }
@@ -168,7 +175,7 @@ func (s *Server) StartTask(c *schema.Case, t *task.Task, opt audit.Options, expl
 func (s *Server) StartTaskAs(c *schema.Case, t *task.Task, opt audit.Options, explain string, disabled []string, quotaClient string) *Session {
 	// 续审前先把"上一轮查了什么、这轮要重查什么"告诉读者。
 	opt.Recheck = convertRecheck(t.NextRecheck)
-	opt.ResumeHint = fmt.Sprintf("第 %d 轮续审：材料已补齐（%d 份附件），复用已核验结果，只重查受影响的判定项",
+	opt.ResumeHint = fmt.Sprintf("第 %d 轮续审：使用补交的材料重新执行完整审核（%d 份附件）",
 		len(t.Runs)+1, len(t.Attachments))
 
 	// 关键：把补交的材料真正喂进判定。
@@ -188,7 +195,7 @@ func (s *Server) StartTaskAs(c *schema.Case, t *task.Task, opt audit.Options, ex
 		TaskID:      t.ID,
 		QuotaClient: quotaClient,
 		OnFinish: func(rep *audit.Report) {
-			s.applyReportToTask(t.ID, rep, c)
+			s.applyReportToTask(t.ID, rep, eff)
 		},
 		OnFail: func(string) { s.releaseTask(t.ID) },
 	})
@@ -392,9 +399,20 @@ func (s *Server) OpenReviewStore(path string) error {
 // 这是本项目的记忆机制：人纠正过的结论会改变下一次查重的结果。
 // 因为会改变业务状态，所以要求：操作人必须是名单里的真实工号，且结论可撤销。
 func (s *Server) AddReview(r ReviewOutcome, history *schema.HistRecord) (ReviewOutcome, error) {
+	s.reviewMu.Lock()
+	defer s.reviewMu.Unlock()
 	c, ok := s.Find(r.CaseID)
 	if !ok {
 		return ReviewOutcome{}, fmt.Errorf("用例不存在: %s", r.CaseID)
+	}
+	if !isApproval(r.Decision) {
+		if _, approved := s.activeApproval(r.CaseID); approved {
+			return ReviewOutcome{}, fmt.Errorf("这张单已有生效的人工通过记录，请先撤销通过，再修改复核结论")
+		}
+	} else if s.Tasks != nil {
+		if t, found := s.Tasks.FindByCase(r.CaseID); found && t.State == task.Withdrawn {
+			return ReviewOutcome{}, fmt.Errorf("这张单的任务已撤销，不能确认通过")
+		}
 	}
 	// 只有"通过"类结论才写查重库：驳回的结论代表这张票不该报，
 	// 写进去反而会让它以后被判"已报销过"，语义是错的。
@@ -423,17 +441,10 @@ func (s *Server) AddReview(r ReviewOutcome, history *schema.HistRecord) (ReviewO
 	if err != nil {
 		return ReviewOutcome{}, err
 	}
-	if dup {
-		// 重复提交：不新增记录，也不重复回写查重库。
-		// 但要把"这是重复提交"告诉调用方，避免界面显示成两次不同结论。
-		saved.Duplicate = true
-		return saved, nil
-	}
-	if put != nil {
-		saved.AffectedHistory = HistoryRef{ClaimNo: put.ClaimNo, InvoiceNo: put.InvoiceNo, Applied: true}
-		// 把回写标记记回记录本身，撤销时按它回滚（这一步失败不影响结论，只影响撤销路径）。
-		if err := s.reviews.UpdateAffectedErr(saved.ID, saved.AffectedHistory); err != nil {
-			return ReviewOutcome{}, err
+	saved.Duplicate = dup
+	if isApproval(saved.Decision) {
+		if err := s.syncTaskApproval(c); err != nil {
+			return saved, fmt.Errorf("人工通过已保存，但任务状态未同步。可原样重试：%w", err)
 		}
 	}
 	return saved, nil
@@ -441,18 +452,27 @@ func (s *Server) AddReview(r ReviewOutcome, history *schema.HistRecord) (ReviewO
 
 // RevokeReview 撤销一条复核结论：标记撤销并从查重库撤掉对应记录。
 func (s *Server) RevokeReview(id, by, byName, reason string) (ReviewOutcome, error) {
-	rec, already, err := s.reviews.Revoke(id, by, byName, reason)
+	s.reviewMu.Lock()
+	defer s.reviewMu.Unlock()
+	rec, _, err := s.reviews.Revoke(id, by, byName, reason)
 	if err != nil {
 		return ReviewOutcome{}, err
-	}
-	if already {
-		return rec, nil
 	}
 	// 回滚查重库。落盘失败要报出去：内存里已标记撤销、盘上还有查重记录，
 	// 那下一次同票仍会被判"报过"，而界面以为已经撤了。
 	if rec.AffectedHistory.Applied && rec.AffectedHistory.ClaimNo != "" {
 		if _, err := s.reviews.DropHistory(rec.AffectedHistory.ClaimNo); err != nil {
 			return ReviewOutcome{}, err
+		}
+	}
+	if isApproval(rec.Decision) && s.Tasks != nil {
+		if c, ok := s.Find(rec.CaseID); ok {
+			if _, found := s.activeApproval(rec.CaseID); found {
+				return rec, s.syncTaskApproval(c)
+			}
+		}
+		if t, ok := s.Tasks.FindByCase(rec.CaseID); ok && t.ApprovalReviewID == rec.ID {
+			return rec, s.Tasks.ReopenAfterApprovalRevoked(t.ID, rec.ID, by)
 		}
 	}
 	return rec, nil
@@ -497,7 +517,21 @@ func (s *Server) Stats() map[string]any {
 
 // connectTools 复用 cmd 里的连接逻辑：远程优先，否则进程内起 MCP 服务。
 func (s *Server) connectTools(ctx context.Context, c *schema.Case) (audit.Explorer, func(), error) {
-	return connect(ctx, s.MCPURL, s.MCPData, c, s.MCPToken, s.extra())
+	s.reviewMu.Lock()
+	own := map[string]bool{}
+	for _, r := range s.Reviews() {
+		if r.CaseID == c.ID && r.AffectedHistory.Applied {
+			own[r.AffectedHistory.ClaimNo] = true
+		}
+	}
+	var history []schema.HistRecord
+	for _, h := range s.extra() {
+		if !own[h.ClaimNo] {
+			history = append(history, h)
+		}
+	}
+	s.reviewMu.Unlock()
+	return connect(ctx, s.MCPURL, s.MCPData, c, s.MCPToken, history)
 }
 
 // LLM 返回模型调用客户端（进程内单例）。

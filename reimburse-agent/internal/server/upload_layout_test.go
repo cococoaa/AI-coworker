@@ -62,7 +62,7 @@ func TestUploadFormElements(t *testing.T) {
 	page := pageSource(t)
 	ids := []string{
 		"tabUpload", "uploadPane", "upBtn", "upSample", "upStatus", "upResult",
-		"up_invoice", "up_support", "up_claim_no", "up_applicant_id", "up_category",
+		"up_invoice", "up_support", "up_request_no", "up_applicant_id", "up_category", "upMore", "upPreview",
 	}
 	for _, id := range ids {
 		if !strings.Contains(page, `id="`+id+`"`) {

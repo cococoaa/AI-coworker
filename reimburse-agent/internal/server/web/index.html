@@ -25,7 +25,10 @@ main{display:grid;grid-template-columns:clamp(280px,26vw,340px) minmax(320px,1fr
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 /* 左栏表单可能很长：限制高度并允许滚动，保证按钮始终可达 */
 .panel.left{max-height:calc(100vh - 90px);display:flex;flex-direction:column}
-.panel.left #uploadPane{overflow:auto;flex:1}
+.panel.left #uploadPane{overflow:auto;min-height:0;flex:1}
+.panel.left > .tabs,.panel.left :is(#filters,#taskFilters){flex:none}
+.panel.left > :is(#casePane,#taskPane){display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:hidden}
+.panel.left :is(#cases,#tasks){flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-gutter:stable;scrollbar-color:#626e82 var(--panel)}
 .panel.right{position:sticky;top:74px;max-height:calc(100vh - 90px);display:flex;flex-direction:column}
 .panel.right .body{overflow:auto}
 .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);margin:0;padding:10px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
@@ -142,6 +145,11 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
 .upform .f input,.upform .f select{background:var(--panel2);border:1px solid var(--line);
   color:var(--fg);border-radius:5px;padding:5px 7px;font-size:12px;font-family:inherit}
 .upform .f input[type=file]{padding:3px;font-size:11px}
+.upform .f input,.upform .f select{min-width:0}
+.upform .upmore{border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.upmore summary{cursor:pointer;color:var(--dim);font-size:12px}
+.upmore-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-top:10px}
+.upform #upPreview{font-size:12px;line-height:1.6}
 .uphint{grid-column:1 / -1;font-size:11.5px;color:var(--dim);line-height:1.6;padding:8px 10px;
   background:var(--panel2);border:1px solid var(--line);border-radius:6px}
 .upok{background:#0d1f12;border:1px solid #1d4025;color:#7ee787;font-size:12px;
@@ -180,11 +188,86 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
 .srcbadge.support{background:#1e1a0c;color:#e3c07b;border:1px solid #4a3b12}
 .srcbadge.none{background:#22100f;color:#ff9b94;border:1px solid #5a2321}
 .srcbadge.empty{background:#1a1e26;color:var(--faint);border:1px solid var(--line)}
+[hidden]{display:none!important}
+.contest{max-width:1140px;margin:16px auto;padding:0 16px;display:grid;gap:14px}
+.contest .body{padding:16px}
+.demo-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.demo-result{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px}
+.demo-result p{margin:6px 0}
+.demo-content{display:block;width:100%;min-height:150px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:10px 0;font:inherit}
+@media(max-width:620px){.demo-results{grid-template-columns:1fr}}
+.workbench-meta{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px}
+.conversation{max-width:820px;margin:0 auto;padding:24px 18px;min-height:calc(100vh - 65px);display:flex;flex-direction:column}
+.chat-log{flex:1;min-height:240px;display:flex;flex-direction:column;gap:18px;padding:12px 0 24px}
+.chat-turn{display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+.chat-turn.user{align-items:flex-end}
+.chat-speaker{font-size:12px;color:var(--dim)}
+.chat-message{max-width:min(660px,92%);white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.7}
+.chat-turn.user .chat-message{background:var(--panel2);border:1px solid var(--line);padding:7px 13px;border-radius:12px}
+.chat-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chat-composer{position:sticky;bottom:0;background:var(--bg);padding:10px 0 4px}
+.chat-input-row{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px}
+.chat-input-row input{flex:1;min-width:80px;background:transparent;color:var(--fg);font:inherit;border:0;padding:8px}
+.chat-input-row input:focus-visible{outline:2px solid var(--info);border-radius:6px}
+.chat-input-row button{white-space:nowrap}
+.chat-attachment{margin-bottom:10px}
+.chat-attachment summary{padding:9px 12px;cursor:pointer}
+.chat-case-picker{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 9px}
+.chat-case-picker select{max-width:min(100%,420px);flex:1}
+.sup-editor{display:grid;gap:8px;margin:8px 0}
+.sup-editor label{display:grid;gap:3px;color:var(--fg);font-size:12px}
+.sup-editor small{color:var(--dim);font-size:11px}
+.sup-editor :is(input,textarea,select){width:100%;min-width:0;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 7px;font:inherit}
+.sup-paste summary{cursor:pointer;color:var(--info);font-size:12px;margin-bottom:5px}
+.sup-feedback{color:var(--warn);font-size:12px;margin-top:4px}
+.review-heading{font-size:12px;color:var(--faint);margin:8px 0}
+.review-controls{display:grid;gap:7px;margin:8px 0}
+.review-search{width:100%;min-width:0;color:var(--fg);background:var(--panel2);border:1px solid var(--line);padding:6px 8px;border-radius:6px;font:inherit}
+.review-top,.review-pager{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.review-pager{margin-top:8px;font-size:12px;color:var(--dim)}
+.review-note,.review-revoked{margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere}
+.review-revoked{color:var(--bad)}
+#reviewArchive{width:min(680px,calc(100% - 32px));max-height:calc(100vh - 48px);overflow:auto;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:16px}
+#reviewArchive::backdrop{background:#0009}
+#reviewArchive h2{font-size:16px;margin:0}
 </style>
 </head>
 <body>
 <header>
   <h1>报销审核 · AI 同事</h1>
+  <button id="contestToggle" class="ghost" aria-controls="contestPane" aria-expanded="false">比赛演示</button>
+  <button id="workbenchToggle" class="ghost" aria-controls="businessPane" aria-expanded="false">审核工作台</button>
+  <button id="reviewArchiveToggle" class="ghost" aria-haspopup="dialog">复核记录</button>
+</header>
+
+<dialog id="reviewArchive" aria-labelledby="reviewArchiveTitle">
+  <div class="review-top"><h2 id="reviewArchiveTitle">复核记录</h2><form method="dialog"><button class="ghost">关闭</button></form></div>
+  <div id="reviewArchiveList"></div>
+</dialog>
+
+<section id="conversation" class="conversation" aria-label="报销同事对话">
+  <div id="chatLog" class="chat-log" role="log" aria-live="polite">
+    <div class="chat-turn">
+      <span class="chat-speaker">报销同事</span>
+      <div class="chat-message">你好。有发票就发给我，也可以聊点别的。</div>
+    </div>
+  </div>
+  <div class="chat-composer">
+    <details id="chatAttachment" class="panel chat-attachment" hidden><summary>填写报销信息并送审</summary></details>
+    <div id="chatCasePicker" class="chat-case-picker" hidden>
+      <select id="chatCase" aria-label="选择已有单据"></select>
+      <button type="button" class="primary" id="chatAuditExisting">送审</button>
+    </div>
+    <form id="chatForm" class="chat-input-row">
+      <button type="button" class="ghost" id="chatAttach">发票送审</button>
+      <input id="chatInput" aria-label="消息" maxlength="1600" autocomplete="off" placeholder="发消息…">
+      <button type="submit" class="primary" id="chatSend">发送</button>
+    </form>
+    <button type="button" class="ghost" id="chatChoose" style="margin-top:7px">选择已有单据</button>
+  </div>
+</section>
+
+<div class="workbench-meta" id="workbenchMeta" hidden>
   <span id="m-rules" class="badge"></span>
   <span id="m-ds" class="badge"></span>
   <span id="m-cl" class="badge"></span>
@@ -193,9 +276,9 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
   <span id="m-prov" class="badge" title=""></span>
   <span id="m-quota" class="badge" title="本周 AI 用量"></span>
   <span id="m-cost" class="badge"></span>
-</header>
+</div>
 
-<main>
+<main id="businessPane" hidden>
   <section class="panel left">
     <div class="tabs">
       <button id="tabTasks" class="on">进行中 <span class="n" id="taskCount">0</span></button>
@@ -204,31 +287,35 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
     </div>
     <div id="taskPane">
       <div class="filters" id="taskFilters"></div>
-      <div id="tasks"></div>
+      <div id="tasks" role="region" aria-label="任务列表" tabindex="0"></div>
     </div>
     <div id="uploadPane" style="display:none">
       <div class="upform">
-        <div class="uphint">上传电子发票（PDF 或文本）与佐证凭证，系统提取文字后建成一张可审核的单据。
-          图片与扫描件需要 OCR，当前不支持。</div>
-        <label class="f">报销单号<input id="up_claim_no" placeholder="BX26110999"></label>
-        <label class="f">申请单号<input id="up_request_no" placeholder="SQ20261118001"></label>
-        <label class="f">类别
-          <select id="up_category">
+        <div class="uphint">选择带文字层的 PDF 或文本，系统会自动带出可识别的信息，提交后生成报销单号。</div>
+        <label class="f full">发票文件（必填）<input id="up_invoice" type="file" accept=".pdf,.txt,application/pdf,text/plain" required></label>
+        <div id="upPreview" class="full muted" role="status" hidden></div>
+        <label class="f">类别（必填）
+          <select id="up_category" required>
+            <option value="">选择类别</option>
             <option value="transport">交通</option>
             <option value="lodging">住宿</option>
             <option value="meal">餐饮</option>
           </select></label>
-        <label class="f">申请人工号<input id="up_applicant_id" placeholder="E1001"></label>
-        <label class="f">申请人姓名<input id="up_applicant_name" placeholder="张伟"></label>
-        <label class="f">出发城市<input id="up_from_city" placeholder="上海"></label>
-        <label class="f">到达城市<input id="up_city" placeholder="杭州"></label>
-        <label class="f">开始日期<input id="up_start_date" type="date"></label>
-        <label class="f">结束日期<input id="up_end_date" type="date"></label>
-        <label class="f">申请金额（元）<input id="up_amount" type="number" step="0.01" placeholder="73.00"></label>
-        <label class="f full">事由<input id="up_purpose" placeholder="客户现场支持"></label>
-        
-        <label class="f full">发票文件（必填）<input id="up_invoice" type="file" accept=".pdf,.txt,application/pdf,text/plain"></label>
+        <label class="f">申请人工号（必填）<input id="up_applicant_id" required></label>
+        <label class="f full">申请单号（已有申请时填写）<input id="up_request_no" placeholder="填写已有的申请单号"></label>
         <label class="f full">佐证凭证（可选）<input id="up_support" type="file" accept=".pdf,.txt,application/pdf,text/plain"></label>
+        <details class="full upmore" id="upMore">
+          <summary>更多报销信息</summary>
+          <div class="upmore-grid">
+            <label class="f">申请人姓名<input id="up_applicant_name"></label>
+            <label class="f">申请金额（元）<input id="up_amount" type="number" min="0" step="0.01"></label>
+            <label class="f">出发城市<input id="up_from_city"></label>
+            <label class="f">到达城市<input id="up_city"></label>
+            <label class="f">开始日期<input id="up_start_date" type="date"></label>
+            <label class="f">结束日期<input id="up_end_date" type="date"></label>
+            <label class="f full">事由<input id="up_purpose"></label>
+          </div>
+        </details>
         <div class="actions">
           <button id="upBtn" class="primary">上传并建单</button>
           <button id="upSample" class="ghost" title="填入一份样例电子发票，用于快速验证链路">用样例发票</button>
@@ -239,7 +326,7 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
     </div>
     <div id="casePane" style="display:none">
       <div class="filters" id="filters"></div>
-      <div id="cases"></div>
+      <div id="cases" role="region" aria-label="单据列表" tabindex="0"></div>
     </div>
   </section>
 
@@ -260,7 +347,7 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
         <option value="check_company=error">企业核验报错</option>
         <option value="check_history=timeout">历史查重超时</option>
       </select>
-      <select id="whoSel" title="当前操作人（工号）"></select>
+      <select id="whoSel" aria-label="复核操作人" title="复核操作人"></select>
       <span style="flex:1"></span>
       <span id="runState" class="muted"></span>
     </div>
@@ -274,10 +361,42 @@ pre{margin:6px 0 0;padding:8px 10px;background:#0b0d11;border:1px solid var(--li
   </section>
 </main>
 
+<section id="contestPane" class="contest" hidden>
+  <div class="muted">合成票据与字段抽取 · MCP 模拟核验</div>
+  <section class="panel">
+    <h2>制度对比</h2>
+    <div class="body">
+      <p>同一张差旅单在出差结束后第 25 天提交，申请报销 ¥553.00。</p>
+      <button id="contestCompare" class="primary">对比审核</button>
+      <div id="contestComparison" class="demo-results" aria-live="polite"></div>
+    </div>
+  </section>
+  <section class="panel">
+    <h2>补件续审 · 市政国企示例</h2>
+    <div class="body">
+      <p>这张差旅单初次提交时缺少铁路行程单。</p>
+      <button id="contestStart" class="primary">开始首轮审核</button>
+      <div id="contestRounds" class="demo-results" aria-live="polite"></div>
+      <div id="contestSupplement" hidden>
+        <label for="contestContent">补交铁路行程单（已填入合成样例，可编辑）</label>
+        <textarea id="contestContent" class="demo-content" rows="7">铁路电子客票报销凭证
+乘车人:林晓雯
+乘车日期：2026-10-15
+车次：G7305  上海站 → 重庆站
+席别：二等座
+票价：¥553.00
+合计:¥553.00</textarea>
+        <button id="contestResume" class="primary">提交补件并续审</button>
+      </div>
+    </div>
+  </section>
+  <div id="contestStatus" class="muted" role="status"></div>
+</section>
+
 <script>
 const $ = s => document.querySelector(s);
 const S = {cases:[], cat:"all", sel:null, ses:null, es:null, evCount:0, report:null,
-  tasks:[], tab:"tasks", taskFilter:"waiting", taskID:null, task:null};
+  tasks:[], tab:"tasks", taskFilter:"approved", taskID:null, task:null};
 
 const DEC = {approve:"通过",approve_with_adjustment:"调整后通过",manual_review:"转人工复核",need_more_info:"退回补材料",reject:"驳回"};
 const STAGE = [{k:"plan",n:"确定范围"},{k:"extract",n:"双模型抽取"},{k:"tools",n:"工具核验"},{k:"aggregate",n:"规则判定"},{k:"explain",n:"审核意见"}];
@@ -287,9 +406,69 @@ const yuan = f => "¥" + (f/100).toFixed(2);
 async function jget(u){ const r = await fetch(u); if(!r.ok) throw new Error(await r.text()); return r.json(); }
 async function jpost(u, b){ const r = await fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
 
+let contestTaskID = null;
+const contestButtons = [$("#contestCompare"), $("#contestStart"), $("#contestResume")];
+$("#contestToggle").onclick = () => {
+  const open = $("#contestPane").hidden;
+  $("#contestPane").hidden = !open;
+  $("#conversation").hidden = open;
+  setWorkbench(false);
+  $("#contestToggle").setAttribute("aria-expanded", String(open));
+  $("#contestToggle").textContent = open ? "返回对话" : "比赛演示";
+};
+
+function contestCard(title, audit){
+  const r = audit.result;
+  const findings = (r.findings || []).map(f => `<p><b>${esc(f.check_id)} ${esc(f.clause)}</b> · ${esc(f.reason)}</p>`).join("");
+  return `<article class="demo-result">
+    <strong>${esc(title)}</strong>
+    <p class="muted">${esc(audit.version)} · 报销期限 ${audit.deadline_days} 天</p>
+    <p><b>${esc(DEC[r.decision] || r.decision)}</b> · 核准 ${yuan(r.approved_fen)}</p>
+    ${findings}
+  </article>`;
+}
+
+async function runContest(action, body, show){
+  contestButtons.forEach(button => button.disabled = true);
+  $("#contestStatus").textContent = "审核中…";
+  try {
+    const response = await fetch("/api/contest/" + action, {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)
+    });
+    const data = await response.json().catch(() => ({}));
+    if(!response.ok) throw new Error(data.error || "比赛演示暂不可用");
+    show(data);
+    $("#contestStatus").textContent = "";
+  } catch(e) {
+    $("#contestStatus").textContent = e.message;
+  } finally {
+    contestButtons.forEach(button => button.disabled = false);
+  }
+}
+
+$("#contestCompare").onclick = () => runContest("compare", {}, data => {
+  $("#contestComparison").innerHTML = contestCard("默认制度", data.default) + contestCard("市政国企示例", data.municipal);
+});
+$("#contestStart").onclick = () => runContest("start", {}, data => {
+  contestTaskID = data.task.id;
+  $("#contestRounds").innerHTML = contestCard("第 1 轮 · 首次审核", data.audit);
+  $("#contestContent").value = $("#contestContent").defaultValue;
+  $("#contestSupplement").hidden = data.task.state !== "need_more";
+});
+$("#contestResume").onclick = () => runContest("resume", {
+  task_id: contestTaskID, content: $("#contestContent").value
+}, data => {
+  const rounds = $("#contestRounds");
+  const title = `第 ${data.task.runs.length} 轮 · 补件后续审`;
+  if(rounds.children.length > 1) rounds.lastElementChild.remove();
+  rounds.insertAdjacentHTML("beforeend", contestCard(title, data.audit));
+  $("#contestSupplement").hidden = data.task.state !== "need_more";
+});
+
 async function boot(){
   const meta = await jget("/api/meta");
-  $("#m-rules").textContent = `规则 ${meta.rules.count} 条 / 判定项 ${meta.rules.checks} 个`;
+  S.toolDataIsMock = meta.provenance?.tool_backend === "mock";
+  $("#m-rules").textContent = `${meta.rules.policy} · ${meta.rules.version} · 报销期限 ${meta.rules.deadline_days} 天`;
   const dm = meta.models.find(m=>m.provider==="deepseek"), cm = meta.models.find(m=>m.provider==="claude");
   $("#m-ds").textContent = `DeepSeek ${dm.key_ready?"就绪":"未配置密钥"}`;
   $("#m-ds").className = "badge " + (dm.key_ready?"ok":"");
@@ -301,7 +480,7 @@ async function boot(){
     const pv = meta.provenance;
     const el = $("#m-prov");
     el.textContent = pv.model_live ? "模型：真实调用 ／ 票据：合成 ／ 核验：mock"
-                                  : "模型：未配置 ／ 票据：合成 ／ 核验：mock";
+                                  : pv.synthetic_enabled ? "票据与抽取：合成 ／ MCP 数据：模拟" : "模型：未配置 ／ MCP 数据：模拟";
     el.title = pv.note + "。本系统的结论只代表对合成数据的判定，不代表真实票据识别能力。";
   }
   if(!dm.key_ready && !cm.key_ready){
@@ -318,13 +497,17 @@ async function boot(){
   await loadQuota();
   await loadCases();
   await loadTasks();
+  const initialCase = new URLSearchParams(location.search).get("case");
+  if(S.cases.some(c=>c.id===initialCase)){
+    switchTab("cases");
+    await select(initialCase);
+  }
 }
 
 // ---- 任务队列 ----
-// 财务上班第一件事是问"哪些单卡住了、卡在谁那里"，所以默认视图是进行中的任务，
-// 而不是单据清单。单据清单退到第二个页签（演示时需要它挑单）。
+// 任务按状态筛选，原始单据仍在「全部单据」页签。
 
-async function loadTasks(){
+async function loadTasks(focusID){
   let d;
   try{ d = await jget("/api/tasks"); }
   catch(e){ $("#tasks").innerHTML = `<div class="gap">任务库不可用：${esc(e.message)}</div>`; return; }
@@ -335,23 +518,27 @@ async function loadTasks(){
   S.tasks = d.tasks || [];
   const active = S.tasks.filter(t=>!["approved","rejected","withdrawn"].includes(t.state));
   $("#taskCount").textContent = active.length;
-  const waitMore = active.filter(t=>t.state==="need_more").length;
-  const waitManual = active.filter(t=>t.state==="need_manual").length;
-  $("#taskFilters").innerHTML = [
-    ["waiting", `卡住的 ${waitMore+waitManual}`],
-    ["need_more", `待补材料 ${waitMore}`],
-    ["need_manual", `待复核 ${waitManual}`],
-    ["all", `全部 ${S.tasks.length}`],
-  ].map(([k,n])=>`<button data-f="${k}" class="${S.taskFilter===k?"on":""}">${n}</button>`).join("");
+  const filters = [
+    ["approved", "已通过", "暂无已通过的单据"],
+    ["need_more", "待补材料", "暂无待补材料的单据"],
+    ["need_manual", "待复核", "暂无待复核的单据"],
+    ["rejected", "已驳回", "暂无已驳回的单据"],
+    ["all", "全部", "暂无审核任务"],
+  ];
+  const focused = S.tasks.find(t=>t.id===focusID);
+  if(focused && S.taskFilter!=="all" && S.taskFilter!==focused.state){
+    S.taskFilter = filters.some(([key])=>key===focused.state) ? focused.state : "all";
+  }
+  const byFilter = new Map(filters.map(([key])=>[key,key==="all"?S.tasks:S.tasks.filter(t=>t.state===key)]));
+  $("#taskFilters").innerHTML = filters.map(([key,label])=>
+    `<button data-f="${key}" class="${S.taskFilter===key?"on":""}" aria-pressed="${String(S.taskFilter===key)}">${label} ${byFilter.get(key).length}</button>`
+  ).join("");
   $("#taskFilters").querySelectorAll("button").forEach(b=>b.onclick=()=>{S.taskFilter=b.dataset.f;loadTasks();});
 
-  let list = S.tasks;
-  if(S.taskFilter==="waiting") list = S.tasks.filter(t=>t.state==="need_more"||t.state==="need_manual");
-  else if(S.taskFilter!=="all") list = S.tasks.filter(t=>t.state===S.taskFilter);
-
+  const list = byFilter.get(S.taskFilter) || S.tasks;
   if(list.length===0){
-    $("#tasks").innerHTML = `<div class="gap">${S.taskFilter==="waiting"?"没有卡住的单":"没有任务"}<br>
-      <span class="muted">在「全部单据」里选一张开始审核，任务会自动建出来</span></div>`;
+    const [, , empty] = filters.find(([key])=>key===S.taskFilter) || filters[filters.length-1];
+    $("#tasks").innerHTML = `<div class="gap">${empty}</div>`;
     return;
   }
   $("#tasks").innerHTML = list.map(t=>{
@@ -363,7 +550,9 @@ async function loadTasks(){
         <span style="flex:1"></span>
         <span class="tid">${esc(t.case_id)}</span>
       </div>
-      <div class="sub">卡在 <span class="who">${esc(t.waiting_on)}</span> · ${t.waiting_days>0?`已 ${t.waiting_days} 天`:"今天"} · 第 ${t.rounds||0} 轮</div>
+      <div class="sub">${["approved","rejected","withdrawn"].includes(t.state)
+        ? esc(t.claim_no||t.case_id)
+        : `卡在 <span class="who">${esc(t.waiting_on)}</span> · ${t.waiting_days>0?`已 ${t.waiting_days} 天`:"今天"}`} · 第 ${t.rounds||0} 轮</div>
       ${miss?`<div class="miss">缺：${esc(miss)}</div>`:""}
     </div>`;
   }).join("");
@@ -373,7 +562,7 @@ async function loadTasks(){
 // openTask 展开一张任务：补件清单、材料版本、续审计划、事件轨迹。
 async function openTask(id){
   S.taskID = id;
-  await loadTasks();
+  await loadTasks(id);
   let d;
   try{ d = await jget("/api/tasks/"+id); }
   catch(e){ $("#result").innerHTML = `<div class="warnbar">读取任务失败：${esc(e.message)}</div>`; return; }
@@ -382,26 +571,20 @@ async function openTask(id){
   if(c) S.sel = t.case_id;
 
   const stTxt = t.state==="need_more" ? "退回补材料" : t.state==="need_manual" ? "转人工复核"
-    : t.state==="pending" ? "待审核" : t.state==="approved" ? "初审通过" : t.state==="rejected" ? "已驳回" : "已撤销";
-  const kindName = {absent:"原件未填写", unreadable:"无法辨认", ambiguous:"两模型不一致", missing_attachment:"整份缺失"};
+    : t.state==="pending" ? "待审核" : t.state==="approved" ? (t.approval_review_id?"人工复核通过":"初审通过") : t.state==="rejected" ? "已驳回" : "已撤销";
+  const kindName = {absent:"原件未填写", unreadable:"无法辨认", ambiguous:"两模型不一致", missing_attachment:"整份缺失", explanation:"需补充说明"};
   const items = (t.missing||[]).map(m=>`<div class="finding-row" style="${m.resolved?"opacity:.5;border-left-color:var(--ok)":""}">
     <div class="h">${esc(m.label)} · ${kindName[m.kind]||m.kind}${m.resolved?' <span style="color:var(--ok)">已补交</span>':""}</div>
-    <div class="r">${esc(m.reason)}${m.clause?`（依据 ${esc(m.clause)}）`:""}</div>
-    ${m.resolved?"":`<div style="margin-top:6px">${m.hint?`<div class="muted" style="margin-bottom:3px">${esc(m.hint)}</div>`:""}<input class="supInput" data-k="${esc(m.key)}"
-       placeholder="粘贴补交材料正文；只填文件名不算补交" style="width:100%;background:var(--panel2);
-       border:1px solid var(--line);color:var(--fg);border-radius:5px;padding:4px 7px;font-size:11.5px;font-family:inherit">
-       <button class="ghost supBtn" data-k="${esc(m.key)}" data-l="${esc(m.label)}"
-       style="margin-top:4px;font-size:11px">提交补交</button></div>`}
+    <div class="r">${esc(m.key==="claim_info" && d.claim_fields?.length ? "请补齐下面列出的报销信息。" : m.reason)}${m.clause?`（依据 ${esc(m.clause)}）`:""}</div>
+    ${m.resolved?"":`${supplementEditor(m,d.category,d.claim_fields)}
+      <button class="ghost supBtn" data-k="${esc(m.key)}" data-l="${esc(m.label)}">提交${esc(m.label)}</button>
+      <div class="sup-feedback" role="status"></div>`}
   </div>`).join("");
 
   const atts = (t.attachments||[]).map(a=>`<div class="rvitem">v${a.version} · ${esc(a.name)}
     · ${esc(a.by||"")} · ${esc((a.at||"").slice(0,16).replace("T"," "))}
-    ${a.note?`· ${esc(a.note)}`:""}</div>`).join("");
-
-  const rc = t.next_recheck;
-  const rcBox = rc ? `<div class="muted" style="margin-top:4px">续审时重查 ${(rc.check_ids||[]).length} 项判定：
-    ${esc((rc.check_ids||[]).join("、")||"无")}<br>复用已核验：${esc((rc.keep_verified||[]).join("、")||"无")}
-    <br>必须重查：${esc((rc.reverify||[]).join("、")||"无")}</div>` : "";
+    ${a.note?`· ${esc(a.note)}`:""}
+    ${["late_explanation","finance_request"].includes(a.kind)&&a.content?`<details><summary>查看说明正文</summary><div style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(a.content)}</div></details>`:""}</div>`).join("");
 
   const runs = (t.runs||[]).map(r=>`<div class="rvitem">第 ${r.round} 轮 · ${DEC[r.decision]||r.decision}
     · 核准 ${yuan(r.approved_fen)} · ${r.elapsed_ms||0}ms · $${(r.cost_usd||0).toFixed(5)}
@@ -410,7 +593,7 @@ async function openTask(id){
   const evs = (t.events||[]).map(e=>`<div class="rvitem">${esc((e.at||"").slice(0,16).replace("T"," "))}
     · ${esc(e.detail)}${e.by?` <span class="who">${esc(e.by)}</span>`:""}</div>`).join("");
 
-  const canReaudit = (t.state==="pending"||t.state==="need_more") && !(t.missing||[]).some(m=>!m.resolved);
+  const canReaudit = t.state==="pending" && !(t.missing||[]).some(m=>!m.resolved);
 
   $("#result").innerHTML = `
     <div class="verdict v-${t.state==="approved"?"approve":t.state==="rejected"?"reject":t.state==="need_more"?"need_more_info":"manual_review"}">
@@ -419,12 +602,11 @@ async function openTask(id){
       <div class="muted" style="margin-top:6px">卡在：<b style="color:#a8c7fa">${esc(d.waiting_on)}</b></div>
     </div>
     <h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">补件清单（${(t.missing||[]).filter(m=>!m.resolved).length}/${(t.missing||[]).length} 项待补）</h3>
-    ${items || '<div class="muted">没有缺件</div>'}
+    ${items || (t.state==="need_more" ? '<div class="muted">这次退回没有列出具体材料。请查看审核意见，或请财务补充退回要求。</div>' : '<div class="muted">没有缺件</div>')}
     ${canReaudit?`<button class="primary" id="reauditBtn" style="margin-top:10px;width:100%">
-      ${(t.runs||[]).length>0?"续审（复用已核验结果）":"开始审核"}</button>`:
-      t.state==="need_more"?`<div class="warnbar">还有 ${(t.missing||[]).filter(m=>!m.resolved).length} 项没补齐，不能续审</div>`:""}
+      ${(t.runs||[]).length>0?"续审":"开始审核"}</button>`:
+      t.state==="need_more"&&(t.missing||[]).some(m=>!m.resolved)?`<div class="warnbar">补齐清单里的材料后，可以续审。</div>`:""}
     <div id="taskMsg" style="margin-top:8px"></div>
-    ${rcBox}
     ${atts?`<h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">材料版本</h3>${atts}`:""}
     ${runs?`<h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">审核批次</h3>${runs}`:""}
     ${evs?`<h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">任务轨迹</h3>${evs}`:""}
@@ -439,11 +621,18 @@ async function openTask(id){
 
 // submitSupport 提交一项补交材料，然后刷新任务。
 async function submitSupport(taskID, key, label, btn){
-  const input = document.querySelector(`.supInput[data-k="${key}"]`);
-  const content = input ? input.value.trim() : "";
-  if(!content){ alert("请粘贴补交材料的正文。只登记文件名，续审时判定不会变。"); return; }
+  const item = btn.closest(".finding-row");
+  const status = item.querySelector(".sup-feedback");
+  let content;
+  try{
+    content = readSupplement(item.querySelector(".sup-editor"));
+  }catch(e){
+    status.textContent = e.message;
+    return;
+  }
   const who = $("#whoSel").value;
   btn.disabled = true;
+  status.textContent = "正在提交…";
   try{
     const r = await jpost(`/api/tasks/${taskID}/resubmit`, {
       kind:key, name:label, note:"界面补交", content, employee_id:who});
@@ -455,7 +644,8 @@ async function submitSupport(taskID, key, label, btn){
     $("#taskMsg").innerHTML = `<div class="warnbar">${esc(msg)} ${esc(next)}</div>`;
   }catch(e){
     btn.disabled = false;
-    $("#taskMsg").innerHTML = `<div class="warnbar">提交失败：${esc(e.message)}</div>`;
+    try{ status.textContent = JSON.parse(e.message).error || "提交失败，请重试。"; }
+    catch{ status.textContent = "提交失败，请重试。"; }
   }
 }
 
@@ -469,9 +659,14 @@ async function loadPeople(){
       sel.disabled = true;
       return;
     }
-    sel.innerHTML = '<option value="">选择操作人</option>' +
-      d.people.map(p=>`<option value="${esc(p.employee_id)}" ${p.can_review?"":"data-noreview=1"}>
-        ${esc(p.employee_id)} ${esc(p.name)}${p.can_review?"":"（只读）"}</option>`).join("");
+    const bound = d.people.find(p=>p.employee_id===d.operator_id);
+    const choices = d.can_choose_reviewer ? d.people : (bound ? [bound] : []);
+    sel.innerHTML = '<option value="">' + (d.can_choose_reviewer ? '选择演示复核人' : '未绑定复核人') + '</option>' +
+      choices.map(p=>`<option value="${esc(p.employee_id)}" ${p.can_review?"":"disabled"}>
+        ${esc(p.employee_id)} ${esc(p.name)}${p.can_review?"":"（无复核权限）"}</option>`).join("");
+    if(bound) sel.value = bound.employee_id;
+    sel.disabled = !d.can_choose_reviewer;
+    sel.title = d.can_choose_reviewer ? "本机演示复核人" : "复核记录使用已绑定身份";
   }catch(e){ /* 名单接口失败不影响主流程 */ }
 }
 
@@ -495,36 +690,11 @@ async function loadQuota(){
   }catch(e){}
 }
 
-// loadReviews 渲染复核记录（含撤销按钮）。
-async function loadReviews(){
-  const box = $("#reviewList");
-  if(!box) return;
-  try{
-    const d = await jget("/api/reviews");
-    if(!d.reviews || d.reviews.length===0){ box.innerHTML = ""; return; }
-    box.innerHTML = '<h3 style="font-size:12px;color:var(--faint);margin:6px 0 4px">复核记录</h3>' +
-      d.reviews.slice(0,6).map(r=>`<div class="rvitem ${r.revoked_at?"rev":""}">
-        <span class="who">${esc(r.id)} · ${esc(r.operator_name||r.operator)}</span>
-        <span class="what">${DEC[r.decision]||r.decision}</span>
-        ${r.revoked_at?`<span style="color:var(--bad)">已撤销（${esc(r.revoked_by_name||r.revoked_by)}：${esc(r.revoke_reason||"")}）</span>`
-          :`<button data-rv="${esc(r.id)}">撤销</button>`}
-        <div style="margin-top:2px">${esc(r.note||"")}</div>
-      </div>`).join("");
-    box.querySelectorAll("button[data-rv]").forEach(b=>{
-      b.onclick = async ()=>{
-        const who = $("#whoSel").value;
-        if(!who){ alert("请先选择操作人"); return; }
-        const reason = prompt("撤销原因（会记入审计）");
-        if(reason===null) return;
-        try{
-          const r = await jpost("/api/review/revoke", {id:b.dataset.rv, reason, employee_id:who});
-          $("#reviewResult").innerHTML = `<div class="warnbar">${esc(r.impact.message)}</div>`;
-          await loadReviews();
-        }catch(e){ alert("撤销失败：" + e.message); }
-      };
-    });
-  }catch(e){}
-}
+$("#reviewArchiveToggle").onclick = ()=>{
+  const archive = $("#reviewArchive");
+  archive.showModal();
+  loadReviews($("#reviewArchiveList"));
+};
 
 async function loadCases(){
   const d = await jget("/api/cases");
@@ -547,7 +717,9 @@ async function select(id){
   S.sel = id; await loadCases();
   $("#runBtn").disabled = false;
   const c = await jget("/api/cases/"+id);
-  $("#log").innerHTML = `<div class="empty">已选择 ${id} · ${esc(c.title)}<br><span class="muted">发票原文</span>
+  $("#log").innerHTML = `<div class="empty">已选择 ${id} · ${esc(c.title)}<br>
+    <span class="muted">出差结束 ${esc(c.claim.end_date)} · 提交 ${esc(c.claim.submit_date)}</span><br>
+    <span class="muted">发票原文</span>
     <pre style="margin:12px 14px;text-align:left">${esc(c.invoice)}</pre></div>`;
   $("#result").innerHTML = `<div class="empty">按「开始审核」运行</div>`;
   renderSteps(null);
@@ -583,12 +755,12 @@ function addEvent(ev){
 function oneLine(s){ s=String(s); return s.length>400? s.slice(0,400)+"…" : s; }
 function pretty(ev){
   if(ev.kind==="tool_result"){
-    const t = ev.data;
-    const o = {状态:t.status};
-    if(t.detail) o.说明=t.detail;
-    if(t.invoices) o.发票=t.invoices;
-    if(t.companies) o.企业=t.companies;
-    if(t.history) o.历史=t.history.slice(0,4).concat(t.history.length>4?[{note:`…共 ${t.history.length} 条`}]:[]);
+    const t = readToolOutcome(ev.data);
+    const o = {状态:toolStatusText(t)};
+    if(t.reason) o.说明=t.reason;
+    if(t.invoices.length) o.发票=t.invoices;
+    if(t.companies.length) o.企业=t.companies;
+    if(t.history.length) o.历史=t.history.slice(0,4).concat(t.history.length>4?[{note:`…共 ${t.history.length} 条`}]:[]);
     return JSON.stringify(o,null,2);
   }
   if(ev.kind==="llm_result" && ev.data.value!==undefined) return `value: "${ev.data.value}"\nconfidence: ${ev.data.conf}`;
@@ -599,7 +771,7 @@ function pretty(ev){
 // 首次审核与续审走同一条事件流、同一个报告渲染，区别只在服务端：续审带重查计划。
 async function startAudit(opts){
   opts = opts || {};
-  if(!opts.task_id && !S.sel) return;
+  if(S.running || (!opts.task_id && !S.sel)) return;
   const faults = [];
   const f = $("#faultSel").value;
   if(f){ const [tool,mode] = f.split("="); faults.push({tool,mode}); }
@@ -608,6 +780,9 @@ async function startAudit(opts){
   if($("#offDeepseek").checked) disabled.push("deepseek");
   if(disabled.length===2){ alert("两个模型都关掉就没有任何字段可用，请至少保留一个"); return; }
 
+  const reviewCaseID = S.sel;
+  const chatTurn = beginAuditTurn(opts.label || reviewCaseID || "报销单据", !!opts.task_id);
+  S.running = true;
   $("#runBtn").disabled = true;
   $("#runState").innerHTML = '<span class="spin"></span>' + (opts.task_id ? "续审中" : "运行中");
   // 任务视图里点"续审"时，右栏还是任务详情，直接覆盖会丢上下文；
@@ -627,12 +802,9 @@ async function startAudit(opts){
     sid = r.session_id;
     S.sid = sid;
     S.lastTaskID = opts.task_id || r.task_id || null;
-    if(r.recheck){
-      // 续审时先把"这轮要重查什么"写进日志，读者一眼能看出不是从头再跑。
-      addEvent({seq:0, stage:"plan", kind:"stage", title:"续审计划",
-        detail:`复用：${(r.recheck.keep_verified||[]).join("、")||"无"}；重查判定 ${(r.recheck.check_ids||[]).length} 项`});
-    }
   }catch(e){
+    finishAuditTurn(chatTurn, auditErrorText(e));
+    S.running = false;
     $("#runState").textContent = "启动失败";
     const box = opts.task_id ? $("#taskMsg") : $("#result");
     if(box) box.innerHTML = `<div class="warnbar">启动失败：${esc(e.message)}</div>`;
@@ -642,22 +814,33 @@ async function startAudit(opts){
 
   const es = new EventSource(`/api/audit/${sid}/events`);
   S.es = es;
+  const reviewContext = {caseID:reviewCaseID, sid, taskID:S.lastTaskID};
+  let receivedReport = false;
+  const deliver = rep => {
+    if(receivedReport) return;
+    receivedReport = true;
+    showReport(rep, reviewContext);
+    showAuditTurn(chatTurn, rep, reviewContext);
+  };
   es.addEventListener("snapshot", e=>{
     const d = JSON.parse(e.data);
     S.evCount = 0;
     (d.events||[]).forEach(addEvent);
-    if(d.done && d.report) showReport(d.report);
+    if(d.done && d.report) deliver(d.report);
+    if(d.done && d.error) finishAuditTurn(chatTurn, d.error);
   });
   es.addEventListener("event", e=>{ addEvent(JSON.parse(e.data)); });
-  es.addEventListener("report", e=>{ showReport(JSON.parse(e.data)); });
+  es.addEventListener("report", e=>{ deliver(JSON.parse(e.data)); });
   es.addEventListener("done", e=>{
     es.close(); S.es = null;
+    S.running = false;
     $("#runBtn").disabled = false;
     const d = JSON.parse(e.data);
+    if(!d.ok && !receivedReport && !chatTurn.finished) finishAuditTurn(chatTurn, "这次审核未完成，请重新送审。");
     $("#runState").textContent = d.ok ? "完成" : "异常结束";
     jget("/api/stats").then(x=>{ $("#m-cost").textContent = `本次运行 ${x.sessions||0} 单 · 成本约 $${(x.cost_usd||0).toFixed(5)}`; }).catch(()=>{});
-    // 任务状态变了（退回补材料 / 转人工 / 通过），列表与详情都要刷新。
-    if(S.lastTaskID){ loadTasks(); if(S.taskID===S.lastTaskID) openTask(S.lastTaskID); S.lastTaskID=null; }
+    // 审核结束后保留本轮报告，任务详情通过报告里的按钮打开。
+    if(S.lastTaskID) loadTasks();
   });
   es.onerror = ()=>{
     // 浏览器会自动重连；重连后 snapshot 会把已发生的事件补齐。
@@ -665,8 +848,9 @@ async function startAudit(opts){
   };
 }
 
-function showReport(rep){
+function showReport(rep, reviewContext){
   S.report = rep;
+  const taskID = reviewContext.taskID;
   renderSteps(null);
   $("#elapsed").textContent = `${rep.elapsed_ms}ms · $${(rep.cost_usd||0).toFixed(5)}`;
   const r = rep.result;
@@ -707,9 +891,9 @@ function showReport(rep){
   })() : "";
 
   const tools = Object.entries(rep.tools||{}).map(([k,v])=>{
-    const n = (v.invoices||[]).length + (v.companies||[]).length + (v.history||[]).length;
-    const c = v.status==="ok" ? "" : "warnbar";
-    return `<div class="${c}" style="margin:4px 0">${k}：${v.status}${v.detail?" · "+esc(v.detail):""} · ${n} 条</div>`;
+    const t = readToolOutcome(v);
+    const c = ["ok","found","not_found"].includes(t.status) ? "" : "warnbar";
+    return `<div class="${c}" style="margin:4px 0"><b>${esc(toolNames[k] || k)}</b>：${esc(toolStatusText(t))}${t.reason?`<div class="muted">${esc(t.reason)}</div>`:""}</div>`;
   }).join("");
 
   $("#result").innerHTML = `
@@ -718,6 +902,7 @@ function showReport(rep){
       <div class="amt">核准 ${yuan(r.approved_fen)} · 申请 ${yuan(rep.claim_amount_fen)}</div>
       <div class="muted" style="margin-top:6px">${esc(rep.claim_no)} · 命中 ${(r.hits||[]).length} 项</div>
     </div>
+    ${taskID?'<button class="ghost" id="reportTaskBtn" style="margin:8px 0">查看任务与补件</button>':""}
     ${warns}
     ${rows || '<div class="muted">没有命中任何判定项</div>'}
     ${skipped?`<div class="skipped" style="margin-top:10px"><details><summary>未判定的项（${Object.keys(r.skipped).length}）</summary>${skipped}</details></div>`:""}
@@ -726,9 +911,9 @@ function showReport(rep){
     <h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">抽取字段与置信度</h3>
     <table class="fieldtable"><thead><tr><th>字段</th><th>合并值</th><th>置信度</th></tr></thead><tbody>${fields}</tbody></table>
     ${traceBox}
-    <h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">工具核验</h3>
+    <h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">工具核验${S.toolDataIsMock?" · 模拟数据":""}</h3>
     ${tools}
-    <h3 style="font-size:12px;color:var(--faint);margin:14px 0 4px">人工复核</h3>
+    <h3 id="manualReviewTitle" tabindex="-1" style="font-size:12px;color:var(--faint);margin:14px 0 4px">人工复核</h3>
     <div class="impact">⚠️ 选择「通过」或「按核准金额通过」会把这张发票写入查重库，
       此后同一张发票会被判为<b>重复报销</b>。写错了可以撤销。</div>
     <input id="reviewNote" placeholder="复核意见（可选）">
@@ -739,7 +924,8 @@ function showReport(rep){
       <button data-d="reject">确认驳回</button>
     </div>
     <div id="reviewResult" style="margin-top:8px"></div>
-    <div id="reviewList" style="margin-top:10px"></div>`;
+    <div id="reviewList" data-case="${esc(reviewContext.caseID)}" style="margin-top:10px"></div>`;
+  if(taskID) $("#reportTaskBtn").onclick = ()=>{ switchTab("tasks"); openTask(taskID); };
   loadReviews();
   $("#result").querySelectorAll(".reviewbtns button").forEach(b=>{
     b.onclick = async ()=>{
@@ -747,13 +933,18 @@ function showReport(rep){
       if(!who){ alert("请先在工具栏选择操作人（工号）"); return; }
       try{
         // 带上 session_id：服务端据此用本次真实抽出的发票号写查重记录（真实票据没有标准答案）。
-        const r = await jpost("/api/review", {case_id:S.sel, claim_no:rep.claim_no, session_id:S.sid, decision:b.dataset.d,
+        const r = await jpost("/api/review", {case_id:reviewContext.caseID, claim_no:rep.claim_no, session_id:reviewContext.sid, decision:b.dataset.d,
           note:$("#reviewNote").value, employee_id:who, decision_before:rep.result.decision});
         b.textContent = "已记录 ✓";
         b.disabled = true;
         const imp = r.impact || {};
         $("#reviewResult").innerHTML = `<div class="warnbar">${esc(imp.message||"")}</div>`;
-        await loadReviews();
+        if(r.task_state==="approved") {
+          $("#reviewResult").insertAdjacentHTML("afterbegin", '<div class="upok">人工复核通过，已进入「已通过」列表。</div>');
+        } else if(r.task_note) {
+          $("#reviewResult").insertAdjacentHTML("beforeend", `<div class="warnbar">${esc(r.task_note)}</div>`);
+        }
+        await Promise.all([loadReviews(), loadTasks()]);
       }catch(e){ alert("记录失败：" + e.message); }
     };
   });
@@ -778,17 +969,80 @@ function switchTab(t){
 // 上传成功后单据进入「全部单据」，也能直接在任务列表里被审。
 // 界面上要说清楚：提取失败就是失败，不会拿半份文本蒙混过关。
 
+const uploadFields = {
+  category:"类别", applicant_id:"工号", request_no:"申请单号", applicant_name:"姓名",
+  from_city:"出发城市", city:"到达城市", start_date:"开始日期", end_date:"结束日期",
+  purpose:"事由", amount:"金额"
+};
+const autoUploadValues = new Map();
+let uploadPreviewController;
+
+for(const key of Object.keys(uploadFields)){
+  $("#up_"+key).addEventListener("input",()=>autoUploadValues.delete(key));
+}
+
+async function previewUpload(){
+  uploadPreviewController?.abort();
+  uploadPreviewController = undefined;
+  for(const [key,value] of autoUploadValues){
+    if($("#up_"+key).value===value) $("#up_"+key).value="";
+  }
+  autoUploadValues.clear();
+  const invoice = $("#up_invoice").files[0];
+  const status = $("#upPreview");
+  status.hidden = !invoice;
+  if(!invoice) return;
+  const controller = new AbortController();
+  uploadPreviewController = controller;
+  status.textContent = "正在识别票据…";
+  const form = new FormData();
+  form.append("invoice",invoice);
+  const support = $("#up_support").files[0];
+  if(support) form.append("support",support);
+  try{
+    const res = await fetch("/api/upload/preview",{method:"POST",body:form,signal:controller.signal});
+    const data = await res.json();
+    if(controller.signal.aborted) return;
+    if(!res.ok) throw new Error(data.error || "无法识别票据");
+    $("#up_request_no").placeholder = data.demo_request_no ? "演示时留空会自动生成" : "填写已有的申请单号";
+    data.amount = data.amount_fen == null ? "" : (data.amount_fen/100).toFixed(2);
+    const filled = [];
+    for(const [key,label] of Object.entries(uploadFields)){
+      const input = $("#up_"+key);
+      if(input.value || !data[key]) continue;
+      input.value = data[key];
+      autoUploadValues.set(key,input.value);
+      filled.push(key==="amount" ? "金额 ¥"+data.amount : label);
+    }
+    status.textContent = [
+      data.invoice_no ? "发票 "+data.invoice_no : "",
+      filled.length ? "已填入"+filled.join("、")+"，提交前可修改" : "",
+      data.embedded_support ? "已从同一 PDF 读取佐证凭证" : "",
+      ...(data.warnings || [])
+    ].filter(Boolean).join(" · ");
+  }catch(e){
+    if(!controller.signal.aborted) status.textContent = "自动识别失败："+e.message;
+  }finally{
+    if(uploadPreviewController===controller) uploadPreviewController=undefined;
+  }
+}
+
+$("#up_invoice").onchange = previewUpload;
+$("#up_support").onchange = previewUpload;
+
 async function uploadInvoice(){
+  if(S.running || $("#chatAuditExisting").disabled){ $("#upResult").textContent = "请等本次审核完成后再送审。"; return; }
   const btn = $("#upBtn");
   const inv = $("#up_invoice").files[0];
   if(!inv){ $("#upResult").innerHTML = '<div class="upbad">请选择发票文件</div>'; return; }
+  if(uploadPreviewController){ $("#upResult").textContent = "正在识别票据，请稍等。"; return; }
   const cat = $("#up_category").value;
+  if(!cat){ $("#upResult").textContent = "请选择报销类别。"; $("#up_category").focus(); return; }
   const emp = $("#up_applicant_id").value.trim();
   if(!emp){ $("#upResult").innerHTML = '<div class="upbad">请填写申请人工号</div>'; return; }
 
   const fd = new FormData();
   const put = (k, v) => { if(v !== undefined && v !== null && String(v) !== "") fd.append(k, v); };
-  put("claim_no", $("#up_claim_no").value.trim());
   put("request_no", $("#up_request_no").value.trim());
   put("category", cat);
   put("applicant_id", emp);
@@ -821,7 +1075,7 @@ async function uploadInvoice(){
       return;
     }
     $("#upResult").innerHTML = `<div class="upok">
-      已建单 <b>${esc(d.case_id)}</b><br>
+      已建单 <b>${esc(d.claim_no || d.case_id)}</b>${d.request_no?" · 申请单 "+esc(d.request_no):""}<br>
       发票号码 ${esc(d.invoice_no||"未能识别")} · 提取 ${d.invoice_chars} 字
       ${d.has_support?"· 佐证凭证已提取":"· 无佐证凭证"}<br>
       ${(d.warnings||[]).map(w=>`<div style="color:#e3c07b">⚠ ${esc(w)}</div>`).join("")}
@@ -830,11 +1084,23 @@ async function uploadInvoice(){
     await loadCases();
     await select(d.case_id);
     switchTab("cases");
+    autoUploadValues.clear();
+    for(const key of Object.keys(uploadFields)){
+      if(key!=="applicant_id") $("#up_"+key).value="";
+    }
+    $("#up_invoice").value = "";
+    $("#up_support").value = "";
+    $("#upMore").open = false;
+    $("#upPreview").hidden = true;
+    $("#chatAttachment").open = false;
+    $("#chatAttachment").hidden = true;
+    setWorkbench(false);
+    await startAudit({label:inv.name+" · "+(d.claim_no || d.case_id)+(d.request_no?" · "+d.request_no:"")});
   }catch(e){
     $("#upResult").innerHTML = `<div class="upbad">上传请求失败：${esc(e.message)}</div>`;
   }finally{
     btn.disabled = false;
-    btn.textContent = "上传并建单";
+    btn.textContent = "上传并送审";
     if($("#upStatus")) $("#upStatus").textContent = "";
   }
 }
@@ -853,15 +1119,11 @@ async function useSampleInvoice(){
     const dt = new DataTransfer();
     dt.items.add(f);
     $("#up_invoice").files = dt.files;
-    st.textContent = `已填入 ${f.name}（${Math.round(f.size/1024)} KB），点「上传并建单」`;
+    st.textContent = `已填入 ${f.name}（${Math.round(f.size/1024)} KB），点「上传并送审」`;
     // 顺手把必填项填上，减少演示时的输入。
-    if(!$("#up_claim_no").value) $("#up_claim_no").value = "BX26110666";
-    if(!$("#up_applicant_id").value) $("#up_applicant_id").value = "E1001";
-    if(!$("#up_applicant_name").value) $("#up_applicant_name").value = "张伟";
-    if(!$("#up_from_city").value) $("#up_from_city").value = "上海";
-    if(!$("#up_city").value) $("#up_city").value = "杭州";
-    if(!$("#up_purpose").value) $("#up_purpose").value = "客户现场支持";
-    if(!$("#up_amount").value) $("#up_amount").value = "73.00";
+    await previewUpload();
+    if(!$("#up_category").value){ $("#up_category").value = "transport"; autoUploadValues.set("category","transport"); }
+    if(!$("#up_applicant_id").value){ $("#up_applicant_id").value = "E1001"; autoUploadValues.set("applicant_id","E1001"); }
   }catch(e){
     st.textContent = "取样例失败：" + e.message;
   }
@@ -871,8 +1133,10 @@ $("#upSample").onclick = useSampleInvoice;
 $("#upBtn").onclick = uploadInvoice;
 $("#tabTasks").onclick = ()=>switchTab("tasks");
 $("#tabCases").onclick = ()=>switchTab("cases");
-$("#tabUpload").onclick = ()=>switchTab("upload");
+$("#tabUpload").onclick = ()=>openChatAttachment();
 boot().catch(e=>{ document.body.insertAdjacentHTML("afterbegin", `<div class="warnbar" style="margin:10px">界面初始化失败：${esc(e.message)}</div>`); });
 </script>
+<script src="/ui/review-tools.js"></script>
+<script src="/ui/chat.js"></script>
 </body>
 </html>

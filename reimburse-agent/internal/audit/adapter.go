@@ -130,6 +130,7 @@ func ToJudgeClaim(c *schema.Claim) *judge.Claim {
 		StartDate: c.StartDate, EndDate: c.EndDate, Purpose: c.Purpose,
 		AmountFen: c.AmountFen, SubmitDate: c.SubmitDate,
 		InternalCount: c.InternalCount, ExternalCount: c.ExternalCount, ExternalOrg: c.ExternalOrg,
+		LateExplanation:     c.LateExplanation,
 		EntertainApprovalNo: c.EntertainApprovalNo, SpecialApprovalNo: c.SpecialApprovalNo,
 		SupportFile: c.Attachments.SupportFile,
 	}

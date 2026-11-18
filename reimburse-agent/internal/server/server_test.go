@@ -73,6 +73,91 @@ func localReq(method, target string, body io.Reader) *http.Request {
 	return r
 }
 
+func TestReviewHistoryShowsLinkedClaim(t *testing.T) {
+	s := testServer(t)
+	c, ok := s.Find("C01")
+	if !ok {
+		t.Fatal("missing C01")
+	}
+	task, err := s.Tasks.Create(c.ID, c.Claim.ClaimNo, "测试报销人")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, _, err := s.reviews.AddWithHistory(ReviewOutcome{CaseID: c.ID, Operator: "E3001"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, localReq(http.MethodGet, "/api/reviews", nil))
+	var result struct {
+		Reviews []struct {
+			ReviewOutcome
+			TaskID   string `json:"task_id"`
+			Category string `json:"category"`
+			Title    string `json:"case_title"`
+		} `json:"reviews"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if rec.Code != http.StatusOK || len(result.Reviews) != 1 {
+		t.Fatalf("status %d, result %+v", rec.Code, result)
+	}
+	row := result.Reviews[0]
+	if row.ID != stored.ID || row.ClaimNo != c.Claim.ClaimNo || row.TaskID != task.ID ||
+		row.Category != c.Claim.Category || row.Title != c.Truth.Title {
+		t.Fatalf("incorrect linked claim metadata: %+v", row)
+	}
+}
+
+func TestLocalDemoReviewerSelection(t *testing.T) {
+	s := testServer(t)
+	s.LocalDemoOperators = true
+	people, err := identity.New([]identity.Person{
+		{EmployeeID: "E3001", Name: "王会计", CanReview: true},
+		{EmployeeID: "E3002", Name: "周主管", CanReview: true},
+		{EmployeeID: "E3003", Name: "内审"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.People = people
+	h := s.Routes()
+	post := func(path, payload, remote string) *httptest.ResponseRecorder {
+		t.Helper()
+		r := localReq("POST", path, strings.NewReader(payload))
+		r.Header.Set("Content-Type", "application/json")
+		if remote != "" {
+			r.RemoteAddr = remote
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, r)
+		return rec
+	}
+	rec := post("/api/review", `{"case_id":"C01","decision":"approve","employee_id":"E3002"}`, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("复核失败: %d %s", rec.Code, rec.Body.String())
+	}
+	reviews := s.Reviews()
+	if len(reviews) != 1 || reviews[0].Operator != "E3002" || reviews[0].OperatorName != "周主管" {
+		t.Fatalf("复核记录未采用所选人员: %+v", reviews)
+	}
+	rec = post("/api/review/revoke", `{"id":"`+reviews[0].ID+`","employee_id":"E3001"}`, "")
+	if rec.Code != http.StatusOK || s.Reviews()[0].RevokedBy != "E3001" {
+		t.Fatalf("撤销未按选中的操作人留痕: %d %s", rec.Code, rec.Body.String())
+	}
+	for _, tc := range []struct{ employee, remote string }{
+		{"E3003", ""},
+		{"E3002", "203.0.113.9:443"},
+	} {
+		rec = post("/api/review", `{"case_id":"C01","decision":"reject","employee_id":"`+tc.employee+`"}`, tc.remote)
+		if rec.Code != http.StatusForbidden {
+			t.Errorf("无权限人员应被拒绝: %d %s", rec.Code, rec.Body.String())
+		}
+	}
+}
+
 func TestMetaAndCases(t *testing.T) {
 	s := testServer(t)
 	h := s.Routes()
@@ -423,7 +508,10 @@ func TestQuotaBlocksAudit(t *testing.T) {
 // 未超预算时正常放行。
 func TestQuotaAllowsUnderBudget(t *testing.T) {
 	s := testServer(t)
-	q, _ := quota.Open(filepath.Join(t.TempDir(), "q.json"), quota.DefaultConfig())
+	q, err := quota.Open("", quota.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
 	q.AddUsage("anonymous", 10) // $10 / $50
 	s.Quota = q
 	body, _ := json.Marshal(map[string]any{"case_id": "C01"})
@@ -431,6 +519,20 @@ func TestQuotaAllowsUnderBudget(t *testing.T) {
 	s.Routes().ServeHTTP(rec, httptest.NewRequest("POST", "/api/audit", bytes.NewReader(body)))
 	if rec.Code != 200 {
 		t.Fatalf("未超预算应放行，得到 %d", rec.Code)
+	}
+	var started struct {
+		SessionID string `json:"session_id"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &started); err != nil || started.SessionID == "" {
+		t.Fatalf("审核未启动: %s", rec.Body.String())
+	}
+	s.mu.Lock()
+	session := s.sessions[started.SessionID]
+	s.mu.Unlock()
+	select {
+	case <-session.done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("审核未完成")
 	}
 }
 

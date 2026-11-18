@@ -40,6 +40,14 @@ func applySupplements(c *schema.Case, t *task.Task) (*schema.Case, []string) {
 			eff.Claim.Attachments.SupportFile = "support.txt"
 			continue
 		}
+		switch a.Kind {
+		case "late_explanation":
+			eff.Claim.LateExplanation = strings.TrimSpace(a.Content)
+			continue
+		case "finance_request":
+			// 自由文本留在任务附件中，供财务复核。
+			continue
+		}
 		// claim_info 与字段名两类都走键值映射。
 		body := a.Content
 		if a.Kind == "claim_info" {

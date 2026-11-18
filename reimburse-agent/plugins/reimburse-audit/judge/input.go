@@ -6,17 +6,18 @@ package judge
 // Claim 是员工提交的报销单（插件视角的字段子集）。
 // 只保留判定真正用到的字段，宿主多出来的字段不影响插件。
 type Claim struct {
-	ClaimNo    string
-	RequestNo  string
-	Applicant  Applicant
-	Category   string // transport / lodging / meal
-	FromCity   string
-	City       string
-	StartDate  string // YYYY-MM-DD
-	EndDate    string
-	Purpose    string
-	AmountFen  int64
-	SubmitDate string
+	ClaimNo         string
+	RequestNo       string
+	Applicant       Applicant
+	Category        string // transport / lodging / meal
+	FromCity        string
+	City            string
+	StartDate       string // YYYY-MM-DD
+	EndDate         string
+	Purpose         string
+	AmountFen       int64
+	SubmitDate      string
+	LateExplanation string
 
 	InternalCount int
 	ExternalCount int
